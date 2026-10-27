@@ -17,6 +17,18 @@ Forms (one tab each):
 
 Patient name, age, sex, birthday and enrollment date are entered once and appear on every form.
 
+**Signatures** save as soon as they are drawn. **Finalize signature** locks one for good:
+it can no longer be redrawn, cleared or re-dated.
+
+**Program status** (In program / Completed / Dropped out) is set on each patient's page.
+If it is left alone, a patient counts as Completed once all 12 sessions have a date.
+
+**Dashboard** summarizes every patient on the device, optionally limited to an enrollment
+date range: total enrolled (male / female), average age (male / female), completed,
+dropped out, and average 6MWD at enrollment and end of program. *Export CSV* saves the
+patient table for Excel. 6MWD at enrollment uses the Treatment Plan's *Initial* value,
+or the 6 Minute Walk result when that is blank.
+
 ## Installing on a tablet
 
 Live app: https://thsc-cardiac-rehab-forms.vercel.app
@@ -77,7 +89,8 @@ tags the same; the app picks up changed dropdown options automatically.
 index.html            app shell
 css/app.css           styles
 js/app.js             routing, patient list, patient page, save / download / delete
-js/forms.js           the five tabs and the calculations
+js/forms.js           the five tabs, the calculations and program status
+js/dashboard.js       dashboard figures, patient table and CSV export
 js/template.js        reads and fills the Word template
 js/signature.js       signature pad
 js/store.js           IndexedDB storage

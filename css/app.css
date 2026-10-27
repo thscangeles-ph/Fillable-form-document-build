@@ -20,6 +20,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -173,7 +174,7 @@ input.num { -moz-appearance: textfield; }
 .patient-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .patient-head .back { flex: none; }
 .patient-title { flex: 1; min-width: 0; margin: 0; font: 700 32px/1.15 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.patient-fields { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.patient-fields { display: grid; grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)); gap: 16px; }
 .card.patient-fields > .field { margin-top: 0; }
 
 .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-top: 4px; }
@@ -207,7 +208,9 @@ input.num { -moz-appearance: textfield; }
 .sig-box { position: relative; border-radius: 12px; background: #f7f2e7; border: 1px solid var(--line-strong); overflow: hidden; }
 .sig-canvas { display: block; width: 100%; aspect-ratio: 3 / 1; touch-action: none; cursor: crosshair; position: relative; z-index: 1; }
 .sig-line { position: absolute; left: 6%; right: 6%; bottom: 24%; border-bottom: 1.5px dashed #b8ad97; }
-.sig-foot { display: flex; align-items: end; justify-content: space-between; gap: 10px; }
+.sig-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.sig-foot .actions { margin-left: auto; gap: 8px; }
+.sig-date span { white-space: nowrap; }
 .sig-date { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
 .sig-date .input { min-height: 40px; padding: 6px 10px; font-size: 15px; width: auto; }
 
@@ -251,6 +254,49 @@ input.num { -moz-appearance: textfield; }
 .vit .label { font-size: 13px; }
 .vit .input { min-height: 44px; font-size: 16px; padding: 8px 10px; }
 
+/* signature lock */
+.sig-status.is-final { color: var(--gold); }
+.sig-box.locked { border-color: var(--gold-deep); }
+.sig-box.locked .sig-canvas { cursor: not-allowed; }
+.sig-lock { color: var(--gold); font-size: 13.5px; font-weight: 600; }
+.sig-lock:empty { display: none; }
+
+/* views */
+.view-switch { display: inline-flex; gap: 4px; padding: 4px; margin: 4px 0 6px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.view-switch a { padding: 8px 18px; border-radius: 9px; text-decoration: none; font-weight: 600; color: var(--muted); }
+.view-switch a:hover { color: var(--text); }
+.view-switch a[aria-current="page"] { background: var(--panel-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--gold); }
+.status-chip { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 99px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line-strong); color: var(--text); }
+.status-chip[data-status="completed"]::before { content: '✓ '; color: var(--ok); }
+.status-chip[data-status="dropped"]::before { content: '✕ '; color: var(--danger); }
+
+/* dashboard */
+.dash-filters { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.dash-filters .field { width: 190px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+.stat-wide { grid-column: 1 / -1; }
+.stat-label { margin: 0; font-size: 14.5px; font-weight: 600; color: #cfc6b6; }
+.stat-value { margin: 0; font-size: 44px; line-height: 1.05; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.stat-unit { font-size: 17px; font-weight: 600; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+.stat-sub { display: block; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--muted); }
+.stat-note { margin: 0; font-size: 13px; color: var(--muted); }
+.stat-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 24px; }
+.stat-rows { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 4px 18px; margin: 6px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 15px; }
+.stat-rows dt { color: var(--muted); }
+.stat-rows dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.section-title { margin: 28px 0 12px; font: 700 22px var(--serif); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.dash-table th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.dash-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.dash-table tr:last-child td { border-bottom: none; }
+.dash-table tbody tr:hover { background: var(--panel-2); }
+.dash-table a { font-weight: 600; text-decoration: none; }
+.dash-table a:hover { color: var(--gold); }
+.numcell { text-align: right; font-variant-numeric: tabular-nums; }
+.dash-table th:nth-child(n+6), .dash-table th:nth-child(3) { text-align: right; }
+
 /* install instructions */
 .dialog { max-width: 420px; padding: 24px; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--panel); color: var(--text); }
 .dialog::backdrop { background: rgba(0, 0, 0, .6); }
@@ -268,6 +314,7 @@ input.num { -moz-appearance: textfield; }
   .patient-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .patient-fields .grow { grid-column: 1 / -1; }
   .two-col { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pills { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .session-top { grid-template-columns: 1fr 1fr; }
   .session-top .date-today { grid-column: 1 / -1; }
@@ -283,6 +330,10 @@ input.num { -moz-appearance: textfield; }
   .patient-head .actions { margin-left: auto; }
   .tab-panel { padding: 16px; }
   .grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr; }
+  .stat-pair { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-value { font-size: 36px; }
+  .dash-filters .field { width: calc(50% - 6px); }
   .vitals, .ex-vitals { grid-template-columns: 1fr; }
   .checks { grid-template-columns: 1fr; }
   .q-row { grid-template-columns: 30px minmax(0, 1fr); }
