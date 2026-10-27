@@ -2,7 +2,7 @@ import { h, todayIso } from './dom.js';
 import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
 import { initInstall, installButton } from './install.js';
-import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, programStatus, statusLabel } from './forms.js';
+import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel } from './forms.js';
 import { renderDashboard, toCsv } from './dashboard.js';
 
 const main = document.getElementById('main');
@@ -242,7 +242,8 @@ async function showPatient(id, tabId) {
     field(ctx, 'pt_sex', 'Sex'),
     birthday,
     field(ctx, 'pt_date', 'Date enrolled'),
-    statusField(ctx));
+    statusField(ctx),
+    dropoutFields(ctx));
   header.querySelector('#f_pt_name').addEventListener('input', (e) => {
     const el = e.target;
     const caret = el.selectionStart;

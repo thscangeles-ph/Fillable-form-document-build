@@ -182,7 +182,11 @@ try {
   await fill('pt_name', 'maria dela cruz');
   await select('pt_sex', 'Female');
   await fill('pt_age', '60');
+  expect(await page.locator('.dropout-row').isHidden(), 'dropout reason hidden while in program');
   await page.selectOption('#f_program_status', 'dropped');
+  expect(await page.locator('.dropout-row').isVisible(), 'dropout reason shown once dropped out');
+  await page.selectOption('#f_dropout_reason', 'Financial');
+  await page.fill('#f_dropout_details', 'Cannot afford sessions');
   await page.waitForTimeout(600);
   await page.getByRole('link', { name: '← Patients' }).click();
   await page.getByRole('link', { name: 'Dashboard' }).click();
@@ -192,7 +196,11 @@ try {
   expect(/^Total enrolled\s+2\b/.test(total) && /Male\s+1/.test(total) && /Female\s+1/.test(total), `total tile: ${total}`);
   const age = await stat('Average age');
   expect(age.includes('52.5') && /Male\s+45\.0/.test(age) && /Female\s+60\.0/.test(age), `age tile: ${age}`);
-  expect(/Dropped out\s+1\b/.test(await stat('Dropped out')), 'dropped tile');
+  const dropped = await stat('Dropped out');
+  expect(/Dropped out\s+1\b/.test(dropped) && /Financial\s+1/.test(dropped), `dropped tile: ${dropped}`);
+  const htn = await stat('Hypertension');
+  expect(/^Hypertension\s+1\b/.test(htn) && /Of enrolled\s+50%/.test(htn) && /Male\s+1/.test(htn) && /Female\s+0/.test(htn), `hypertension tile: ${htn}`);
+  expect((await page.locator('.dash-table').innerText()).includes('Financial'), 'dropout reason in table');
   expect(/Completed\s+0\b/.test(await stat('Completed')), 'completed tile');
   const walk = await stat('6MWD average');
   expect(/Initial\s+387/i.test(walk), `6MWD tile: ${walk}`);

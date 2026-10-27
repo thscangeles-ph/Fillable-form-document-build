@@ -491,3 +491,33 @@ export function statusField(ctx) {
   ctx.watch(() => { select.value = programStatus(ctx.fields); });
   return h('label.field', { for: select.id }, h('span.label', 'Program status'), select);
 }
+
+export const DROPOUT_REASONS = [
+  'Medical / health condition',
+  'Financial',
+  'Transportation / distance',
+  'Work or schedule conflict',
+  'Moved / relocated',
+  'Lost to follow-up',
+  'Personal / family reasons',
+  'Other',
+];
+
+// Shown under the patient header only while the status is Dropped out.
+export function dropoutFields(ctx) {
+  const reason = h('select.input', {
+    id: 'f_dropout_reason',
+    onchange: (e) => ctx.set('dropout_reason', e.target.value),
+  }, h('option', { value: '' }, '— Select a reason —'), DROPOUT_REASONS.map((r) => h('option', { value: r, selected: ctx.fields.dropout_reason === r }, r)));
+  const details = h('input.input', {
+    id: 'f_dropout_details', type: 'text', value: ctx.fields.dropout_details || '',
+    placeholder: 'Details (optional)', oninput: (e) => ctx.set('dropout_details', e.target.value),
+  });
+  const row = h('div.dropout-row',
+    h('label.field', { for: reason.id }, h('span.label', 'Dropout reason'), reason),
+    h('label.field.grow', { for: details.id }, h('span.label', 'Details'), details));
+  ctx.watch(() => { row.hidden = programStatus(ctx.fields) !== 'dropped'; });
+  return row;
+}
+
+export const hasHypertension = (f) => f.itp_comorb_1 === true;

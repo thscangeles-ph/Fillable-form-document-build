@@ -22,10 +22,12 @@ it can no longer be redrawn, cleared or re-dated.
 
 **Program status** (In program / Completed / Dropped out) is set on each patient's page.
 If it is left alone, a patient counts as Completed once all 12 sessions have a date.
+Choosing Dropped out shows a **Dropout reason** list and a details box.
 
 **Dashboard** summarizes every patient on the device, optionally limited to an enrollment
 date range: total enrolled (male / female), average age (male / female), completed,
-dropped out, and average 6MWD at enrollment and end of program. *Export CSV* saves the
+dropped out (with a count per dropout reason), hypertension (ticked under Co-morbidities
+in the Treatment Plan, with male / female), and average 6MWD at enrollment and end of program. *Export CSV* saves the
 patient table for Excel. 6MWD at enrollment uses the Treatment Plan's *Initial* value,
 or the 6 Minute Walk result when that is blank.
 

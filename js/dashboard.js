@@ -1,7 +1,7 @@
 // Program summary computed from every patient record on this device.
 import { h } from './dom.js';
 import { isoToUs } from './template.js';
-import { programStatus, statusLabel, sessionsDone, SESSIONS } from './forms.js';
+import { programStatus, statusLabel, sessionsDone, SESSIONS, DROPOUT_REASONS, hasHypertension } from './forms.js';
 
 const num = (v) => {
   const n = parseFloat(v);
@@ -29,6 +29,21 @@ export function summarize(patients) {
     age: { all: ages(rows), male: ages(bySex('Male')), female: ages(bySex('Female')) },
     completed: rows.filter((r) => r.status === 'completed').length,
     dropped: rows.filter((r) => r.status === 'dropped').length,
+    // Listed in the form's order, then any reason not on the list, then "not recorded".
+    dropoutReasons: (() => {
+      const counts = new Map();
+      for (const r of rows.filter((x) => x.status === 'dropped')) {
+        const key = r.f.dropout_reason || 'Reason not recorded';
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      const order = (k) => (k === 'Reason not recorded' ? 1e9 : DROPOUT_REASONS.indexOf(k) === -1 ? 1e6 : DROPOUT_REASONS.indexOf(k));
+      return [...counts].sort((a, b) => order(a[0]) - order(b[0]));
+    })(),
+    hypertension: {
+      all: rows.filter((r) => hasHypertension(r.f)).length,
+      male: bySex('Male').filter((r) => hasHypertension(r.f)).length,
+      female: bySex('Female').filter((r) => hasHypertension(r.f)).length,
+    },
     active: rows.filter((r) => r.status === 'active').length,
     walk: {
       initial,
@@ -79,7 +94,12 @@ export function renderDashboard(all, { from, to, onFilter, onExport }) {
     tile('Total enrolled', String(s.total), '', [['Male', String(s.male)], ['Female', String(s.female)], ...(s.sexUnknown ? [['Sex not recorded', String(s.sexUnknown)]] : [])]),
     tile('Average age', fmt1(mean(s.age.all)), 'yrs', [['Male', `${fmt1(mean(s.age.male))} yrs`], ['Female', `${fmt1(mean(s.age.female))} yrs`]], n(s.age.all)),
     tile('Completed', String(s.completed), '', [['Of enrolled', pct(s.completed, s.total)], ['Still in program', String(s.active)]]),
-    tile('Dropped out', String(s.dropped), '', [['Of enrolled', pct(s.dropped, s.total)]]),
+    tile('Dropped out', String(s.dropped), '', [['Of enrolled', pct(s.dropped, s.total)], ...s.dropoutReasons.map(([k, v]) => [k, String(v)])]),
+    tile('Hypertension', String(s.hypertension.all), '', [
+      ['Of enrolled', pct(s.hypertension.all, s.total)],
+      ['Male', String(s.hypertension.male)],
+      ['Female', String(s.hypertension.female)],
+    ], 'Ticked under Co-morbidities in the Treatment Plan.'),
     h('section.stat.stat-wide',
       h('h3.stat-label', '6MWD average'),
       h('div.stat-pair',
@@ -88,7 +108,7 @@ export function renderDashboard(all, { from, to, onFilter, onExport }) {
       h('dl.stat-rows', h('dt', 'Average change'), h('dd', s.walk.change.length ? `${signed(mean(s.walk.change))} m (${n(s.walk.change)} with both)` : 'Needs patients with both values'))));
 
   const table = inRange.length ? h('div.table-wrap', h('table.dash-table',
-    h('thead', h('tr', ['Patient', 'Sex', 'Age', 'Enrolled', 'Status', 'Sessions', '6MWD initial', '6MWD end'].map((t) => h('th', { scope: 'col' }, t)))),
+    h('thead', h('tr', ['Patient', 'Sex', 'Age', 'Enrolled', 'Status', 'Hypertension', 'Sessions', '6MWD initial', '6MWD end'].map((t) => h('th', { scope: 'col' }, t)))),
     h('tbody', inRange
       .slice()
       .sort((a, b) => (b.fields.pt_date || '').localeCompare(a.fields.pt_date || ''))
@@ -99,7 +119,8 @@ export function renderDashboard(all, { from, to, onFilter, onExport }) {
           h('td', f.pt_sex || '—'),
           h('td.numcell', f.pt_age || '—'),
           h('td', isoToUs(f.pt_date) || '—'),
-          h('td', statusLabel(programStatus(f))),
+          h('td', statusLabel(programStatus(f)), programStatus(f) === 'dropped' && f.dropout_reason ? h('span.cell-note', f.dropout_reason) : null),
+          h('td', hasHypertension(f) ? 'Yes' : '—'),
           h('td.numcell', `${sessionsDone(f)}/${SESSIONS}`),
           h('td.numcell', fmt0(walkInitial(f))),
           h('td.numcell', fmt0(walkEnd(f))));
@@ -115,6 +136,9 @@ export function toCsv(patients) {
     ['Age', (f) => f.pt_age || ''],
     ['Enrolled', (f) => isoToUs(f.pt_date)],
     ['Status', (f) => statusLabel(programStatus(f))],
+    ['Dropout reason', (f) => (programStatus(f) === 'dropped' ? f.dropout_reason || '' : '')],
+    ['Dropout details', (f) => (programStatus(f) === 'dropped' ? f.dropout_details || '' : '')],
+    ['Hypertension', (f) => (hasHypertension(f) ? 'Yes' : 'No')],
     ['Sessions done', (f) => sessionsDone(f)],
     ['6MWD initial (m)', (f) => walkInitial(f) ?? ''],
     ['6MWD end (m)', (f) => walkEnd(f) ?? ''],
