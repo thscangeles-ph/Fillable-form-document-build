@@ -174,7 +174,7 @@ input.num { -moz-appearance: textfield; }
 .patient-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .patient-head .back { flex: none; }
 .patient-title { flex: 1; min-width: 0; margin: 0; font: 700 32px/1.15 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.patient-fields { display: grid; grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)); gap: 16px; }
+.patient-fields { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, .8fr) minmax(0, 1fr) repeat(3, minmax(0, 1.25fr)); gap: 16px; }
 .card.patient-fields > .field { margin-top: 0; }
 
 .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-top: 4px; }
@@ -275,7 +275,7 @@ input.num { -moz-appearance: textfield; }
 .dash-filters .field { width: 190px; }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
-.stat-wide { grid-column: 1 / -1; }
+.stat-wide { grid-column: span 3; }
 .stat-label { margin: 0; font-size: 14.5px; font-weight: 600; color: #cfc6b6; }
 .stat-value { margin: 0; font-size: 44px; line-height: 1.05; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .stat-unit { font-size: 17px; font-weight: 600; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
@@ -295,7 +295,9 @@ input.num { -moz-appearance: textfield; }
 .dash-table a { font-weight: 600; text-decoration: none; }
 .dash-table a:hover { color: var(--gold); }
 .numcell { text-align: right; font-variant-numeric: tabular-nums; }
-.dash-table th:nth-child(n+6), .dash-table th:nth-child(3) { text-align: right; }
+.dash-table th:nth-child(n+7), .dash-table th:nth-child(3) { text-align: right; }
+.cell-note { display: block; font-size: 13px; color: var(--muted); }
+.dropout-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 
 /* install instructions */
 .dialog { max-width: 420px; padding: 24px; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--panel); color: var(--text); }
@@ -315,6 +317,7 @@ input.num { -moz-appearance: textfield; }
   .patient-fields .grow { grid-column: 1 / -1; }
   .two-col { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-wide { grid-column: 1 / -1; }
   .pills { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .session-top { grid-template-columns: 1fr 1fr; }
   .session-top .date-today { grid-column: 1 / -1; }
@@ -331,6 +334,7 @@ input.num { -moz-appearance: textfield; }
   .tab-panel { padding: 16px; }
   .grid { grid-template-columns: 1fr; }
   .stats { grid-template-columns: 1fr; }
+  .dropout-row { grid-template-columns: 1fr; }
   .stat-pair { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat-value { font-size: 36px; }
   .dash-filters .field { width: calc(50% - 6px); }
