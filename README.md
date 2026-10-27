@@ -55,6 +55,23 @@ python3 -m http.server 8000
 
 Any static host works the same way (Vercel, Netlify, GitHub Pages, a clinic intranet server).
 
+## Sharing records between devices
+
+Each device keeps its own records. To copy them to another tablet or phone:
+
+1. On the device with the records, tap **Share backup** on the Patients screen and pick
+   **Bluetooth**, Quick Share, AirDrop or email. (Where sharing is not available, use
+   **Export backup** and send the downloaded file yourself.)
+2. On the receiving device, open the app and tap **Import backup**, then choose the file
+   (on Android, Bluetooth files land in *Downloads* or *Downloads › Bluetooth*).
+
+Importing merges: new patients are added, and for a patient on both devices the more
+recently edited copy wins. A finalized signature is never replaced or removed.
+
+A web app cannot open a Bluetooth link to another phone by itself (browsers only let
+web pages talk to Bluetooth accessories, and Safari not at all), so the transfer goes
+through the device's own share menu.
+
 ## Where the data lives
 
 Patient records are saved automatically in the browser's IndexedDB **on the device

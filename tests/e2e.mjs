@@ -198,6 +198,32 @@ try {
   expect(/Initial\s+387/i.test(walk), `6MWD tile: ${walk}`);
   expect(await page.locator('.dash-table tbody tr').count() === 2, 'dashboard table rows');
   await page.screenshot({ path: `${out}/dashboard.png`, fullPage: true });
+
+  // Backup round trip: import keeps the newer copy and never drops a finalized signature.
+  await page.getByRole('link', { name: 'Patients' }).click();
+  const [bk] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export backup' }).click()]);
+  const backup = JSON.parse(readFileSync(await bk.path(), 'utf8'));
+  const joven = backup.patients.find((p) => p.fields.pt_name === 'JOVEN SAMILLANO');
+  expect(joven?.signatures?.participant?.final === true, 'backup carries finalized signature');
+  const older = { ...joven, updated: '2000-01-01T00:00:00.000Z', fields: { ...joven.fields, pt_age: '99' } };
+  const newer = { ...joven, updated: '2999-01-01T00:00:00.000Z', fields: { ...joven.fields, pt_age: '46' }, signatures: {} };
+  const extra = { id: 'imported-1', updated: '2026-10-01T00:00:00.000Z', fields: { pt_name: 'ANA REYES', pt_sex: 'Female', pt_age: '58' }, signatures: {} };
+  const importFile = async (patients, name) => {
+    await page.setInputFiles('input[type=file]', { name, mimeType: 'text/plain', buffer: Buffer.from(JSON.stringify({ patients })) });
+    await page.waitForSelector('.toast');
+    const msg = await page.locator('.toast').last().textContent();
+    await page.waitForTimeout(300);
+    return msg;
+  };
+  const msg1 = await importFile([older, extra], 'old.txt');
+  expect(msg1.includes('1 new') && msg1.includes('1 already up to date'), `import older: ${msg1}`);
+  const msg2 = await importFile([newer], 'new.json');
+  expect(msg2.includes('1 updated'), `import newer: ${msg2}`);
+  const after2 = await page.evaluate(async () => (await import('/js/store.js')).listPatients());
+  const j2 = after2.find((p) => p.fields.pt_name === 'JOVEN SAMILLANO');
+  expect(j2.fields.pt_age === '46', `newer copy won: age ${j2.fields.pt_age}`);
+  expect(j2.signatures.participant?.final === true, 'finalized signature kept through newer import');
+  expect(after2.some((p) => p.fields.pt_name === 'ANA REYES'), 'new patient added from backup');
 } finally {
   await browser.close();
   server.kill();
