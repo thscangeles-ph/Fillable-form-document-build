@@ -46,12 +46,36 @@ export function newPatient() {
   };
 }
 
+// Merges a backup into this device. For a patient on both, the more recently
+// edited copy wins, and a finalized signature is never replaced or removed.
 export async function importPatients(list) {
-  let n = 0;
-  for (const p of list) {
-    if (!p || typeof p.id !== 'string' || typeof p.fields !== 'object') continue;
-    await run('readwrite', (s) => s.put({ signatures: {}, ...p }));
-    n++;
+  const result = { added: 0, updated: 0, kept: 0 };
+  for (const incoming of list) {
+    if (!incoming || typeof incoming.id !== 'string' || typeof incoming.fields !== 'object') continue;
+    const theirs = { signatures: {}, ...incoming };
+    const ours = await getPatient(theirs.id);
+    if (!ours) {
+      await run('readwrite', (s) => s.put(theirs));
+      result.added++;
+      continue;
+    }
+    const theirsNewer = (theirs.updated || '') > (ours.updated || '');
+    const winner = theirsNewer ? theirs : ours;
+    const loser = theirsNewer ? ours : theirs;
+    let changed = theirsNewer;
+    const signatures = { ...winner.signatures };
+    for (const [key, sig] of Object.entries(loser.signatures || {})) {
+      if (sig?.final && !signatures[key]?.final) {
+        signatures[key] = sig;
+        if (winner === ours) changed = true;
+      }
+    }
+    if (changed) {
+      await run('readwrite', (s) => s.put({ ...winner, signatures }));
+      result.updated++;
+    } else {
+      result.kept++;
+    }
   }
-  return n;
+  return result;
 }

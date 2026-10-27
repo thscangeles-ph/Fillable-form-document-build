@@ -93,7 +93,7 @@ async function showList() {
   search.addEventListener('input', render);
   render();
 
-  const importInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: onImport });
+  const importInput = h('input', { type: 'file', accept: 'application/json,.json,text/plain,.txt', hidden: true, onchange: onImport });
 
   main.replaceChildren(h('div.page',
     viewSwitch('list'),
@@ -101,13 +101,14 @@ async function showList() {
       h('h1.page-title', 'Patients'),
       h('div.actions',
         installButton(),
+        canShareFiles() ? h('button.btn.btn-ghost', { type: 'button', onclick: shareBackup }, 'Share backup') : null,
         h('button.btn.btn-ghost', { type: 'button', onclick: exportAll }, 'Export backup'),
         h('button.btn.btn-ghost', { type: 'button', onclick: () => importInput.click() }, 'Import backup'),
         importInput,
         h('button.btn.btn-primary', { type: 'button', onclick: createPatient }, '+ New patient'))),
     search,
     list,
-    h('p.fine.center', 'Patient records are stored in this browser on this device. Use Export backup to keep a copy.'),
+    h('p.fine.center', 'Patient records are stored in this browser on this device. Use Share backup or Export backup to copy them to another device, then Import backup there.'),
   ));
   search.focus();
 }
@@ -118,9 +119,32 @@ async function createPatient() {
   location.hash = `#/patient/${encodeURIComponent(p.id)}/consent`;
 }
 
+async function backupJson() {
+  return JSON.stringify({ app: 'thsc-cardiac-rehab', version: 1, exported: new Date().toISOString(), patients: await listPatients() });
+}
+
 async function exportAll() {
-  const data = { app: 'thsc-cardiac-rehab', version: 1, exported: new Date().toISOString(), patients: await listPatients() };
-  download(new Blob([JSON.stringify(data)], { type: 'application/json' }), `THSC Cardiac Rehab backup ${todayIso()}.json`);
+  download(new Blob([await backupJson()], { type: 'application/json' }), `THSC Cardiac Rehab backup ${todayIso()}.json`);
+}
+
+// Phone/tablet share sheet (Bluetooth, Quick Share, AirDrop, email…). Browsers only
+// allow sharing a short list of file types, so the backup goes out as a .txt file.
+const shareFile = (text) => new File([text], `THSC Cardiac Rehab backup ${todayIso()}.txt`, { type: 'text/plain' });
+
+function canShareFiles() {
+  try {
+    return !!navigator.canShare?.({ files: [shareFile('{}')] });
+  } catch {
+    return false;
+  }
+}
+
+async function shareBackup() {
+  try {
+    await navigator.share({ files: [shareFile(await backupJson())], title: 'THSC Cardiac Rehab backup' });
+  } catch (err) {
+    if (err.name !== 'AbortError') toast(`Could not share: ${err.message}`, true);
+  }
 }
 
 async function onImport(e) {
@@ -131,11 +155,10 @@ async function onImport(e) {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : data.patients;
     if (!Array.isArray(list)) throw new Error('Not a backup file');
-    const existing = new Set((await listPatients()).map((p) => p.id));
-    const clashes = list.filter((p) => existing.has(p?.id)).length;
-    if (clashes && !confirm(`${clashes} patient(s) in this backup already exist here and will be replaced with the backup copy. Continue?`)) return;
-    const n = await importPatients(list);
-    toast(`Imported ${n} patient${n === 1 ? '' : 's'}`);
+    const r = await importPatients(list);
+    const parts = [`${r.added} new`, `${r.updated} updated`];
+    if (r.kept) parts.push(`${r.kept} already up to date here`);
+    toast(`Backup imported: ${parts.join(', ')}`);
     route();
   } catch (err) {
     toast(`Could not import: ${err.message}`, true);
