@@ -1,6 +1,7 @@
 import { h, todayIso } from './dom.js';
 import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
+import { initInstall, installButton } from './install.js';
 import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS } from './forms.js';
 
 const main = document.getElementById('main');
@@ -67,6 +68,7 @@ async function showList() {
     h('div.list-head',
       h('h1.page-title', 'Patients'),
       h('div.actions',
+        installButton(),
         h('button.btn.btn-ghost', { type: 'button', onclick: exportAll }, 'Export backup'),
         h('button.btn.btn-ghost', { type: 'button', onclick: () => importInput.click() }, 'Import backup'),
         importInput,
@@ -279,6 +281,7 @@ function toast(text, isError = false) {
 // ---------- boot ----------
 
 (async function boot() {
+  initInstall(toast);
   try {
     schema = await loadTemplate();
   } catch (err) {

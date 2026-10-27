@@ -17,6 +17,20 @@ Forms (one tab each):
 
 Patient name, age, sex, birthday and enrollment date are entered once and appear on every form.
 
+## Installing on a tablet
+
+Live app: https://thsc-cardiac-rehab-forms.vercel.app
+
+It installs as an app with its own home-screen icon, opens full-screen, and keeps
+working without internet (Download Word included).
+
+- **Android tablet / Chrome / Edge:** open the link and tap **Install app** on the
+  Patients screen (or the browser menu → *Install app* / *Add to Home screen*).
+- **iPad:** open the link in **Safari**, tap Share → **Add to Home Screen**.
+- **Windows / Mac:** in Chrome or Edge, click the install icon in the address bar.
+
+Updates install themselves the next time the app is opened while online.
+
 ## Running it
 
 It is a static site with no build step. Serve the folder over HTTP (opening
@@ -67,6 +81,9 @@ js/forms.js           the five tabs and the calculations
 js/template.js        reads and fills the Word template
 js/signature.js       signature pad
 js/store.js           IndexedDB storage
+js/install.js         install button, service worker registration, persistent storage
+sw.js                 offline cache (bump VERSION when its file list changes)
+manifest.webmanifest  app name, icons, full-screen display
 template/             the Word template
 vendor/jszip.min.js   JSZip 3.10.1 (MIT), for reading/writing .docx
 tests/e2e.mjs         browser test: fills every tab, downloads and checks the .docx
