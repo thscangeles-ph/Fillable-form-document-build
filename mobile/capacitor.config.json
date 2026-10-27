@@ -1,0 +1,8 @@
+{
+  "appId": "ph.thsc.cardiacrehab",
+  "appName": "THSC Cardiac Rehab",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#171512"
+  }
+}

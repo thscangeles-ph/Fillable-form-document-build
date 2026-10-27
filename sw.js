@@ -1,20 +1,26 @@
 // Offline support for the installed app.
-// App files: network first (so updates arrive as soon as the tablet is online), cache as fallback.
-// Google Fonts: cache first.
+// Network first (so updates arrive as soon as the tablet is online), cache as fallback.
 // Bump VERSION when APP_FILES changes; file contents refresh on their own.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const APP_CACHE = `app-${VERSION}`;
-const FONT_CACHE = 'fonts';
 const APP_FILES = [
   './',
   'index.html',
   'manifest.webmanifest',
   'css/app.css',
+  'css/fonts.css',
+  'assets/fonts/fraunces-latin-600-normal.woff2',
+  'assets/fonts/fraunces-latin-700-normal.woff2',
+  'assets/fonts/lexend-latin-400-normal.woff2',
+  'assets/fonts/lexend-latin-500-normal.woff2',
+  'assets/fonts/lexend-latin-600-normal.woff2',
+  'assets/fonts/lexend-latin-700-normal.woff2',
   'js/app.js',
   'js/dashboard.js',
   'js/dom.js',
   'js/forms.js',
   'js/install.js',
+  'js/native.js',
   'js/signature.js',
   'js/store.js',
   'js/template.js',
@@ -42,17 +48,6 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(caches.open(FONT_CACHE).then(async (cache) => {
-      const hit = await cache.match(req);
-      if (hit) return hit;
-      const res = await fetch(req);
-      if (res.ok || res.type === 'opaque') cache.put(req, res.clone());
-      return res;
-    }));
-    return;
-  }
 
   if (url.origin !== self.location.origin) return;
   event.respondWith((async () => {
