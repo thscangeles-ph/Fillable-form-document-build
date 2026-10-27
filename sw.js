@@ -2,7 +2,7 @@
 // App files: network first (so updates arrive as soon as the tablet is online), cache as fallback.
 // Google Fonts: cache first.
 // Bump VERSION when APP_FILES changes; file contents refresh on their own.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP_CACHE = `app-${VERSION}`;
 const FONT_CACHE = 'fonts';
 const APP_FILES = [
@@ -11,6 +11,7 @@ const APP_FILES = [
   'manifest.webmanifest',
   'css/app.css',
   'js/app.js',
+  'js/dashboard.js',
   'js/dom.js',
   'js/forms.js',
   'js/install.js',

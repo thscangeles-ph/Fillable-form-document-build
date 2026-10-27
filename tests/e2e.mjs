@@ -60,6 +60,16 @@ try {
   expect(await page.inputValue('#f_end_date') === '2026-11-30', 'end date suggested from start + weeks');
   await sign(0);
   await sign(1);
+
+  // Finalize the participant signature: it locks and drawing no longer changes it.
+  const participant = page.locator('.sig').nth(0);
+  await participant.getByRole('button', { name: 'Finalize signature' }).click();
+  expect((await participant.locator('.sig-lock').textContent()).includes('Locked'), 'participant signature locked');
+  expect(await participant.getByRole('button', { name: 'Clear' }).isHidden(), 'clear hidden once finalized');
+  const before = await page.evaluate(() => document.querySelectorAll('canvas.sig-canvas')[0].toDataURL());
+  await sign(0);
+  const after = await page.evaluate(() => document.querySelectorAll('canvas.sig-canvas')[0].toDataURL());
+  expect(before === after, 'finalized signature cannot be redrawn');
   await page.screenshot({ path: `${out}/consent.png`, fullPage: true });
 
   // DASI: yes to 1-6, no to 7-12 -> 2.75+1.75+2.75+5.5+8+2.7 = 23.45
@@ -159,6 +169,35 @@ try {
   const ct = await zip.file('[Content_Types].xml').async('string');
   expect(ct.includes('document.main+xml') && !ct.includes('template.main+xml'), 'saved as a document');
   console.log(`docx: ${file}`);
+
+  // Finalized signature survives a reload and stays locked.
+  await page.goto(`http://127.0.0.1:${PORT}/#/patient/${page.url().split('/patient/')[1].split('/')[0]}/consent`);
+  await page.waitForSelector('.sig-lock');
+  expect((await page.locator('.sig-lock').first().textContent()).includes('Locked'), 'lock persisted after reload');
+
+  // Dashboard: add a second patient (female, dropped out) and check the summary.
+  await page.goto(`http://127.0.0.1:${PORT}/#/`);
+  await page.getByRole('button', { name: '+ New patient' }).click();
+  await page.waitForSelector('#f_pt_name');
+  await fill('pt_name', 'maria dela cruz');
+  await select('pt_sex', 'Female');
+  await fill('pt_age', '60');
+  await page.selectOption('#f_program_status', 'dropped');
+  await page.waitForTimeout(600);
+  await page.getByRole('link', { name: '← Patients' }).click();
+  await page.getByRole('link', { name: 'Dashboard' }).click();
+  await page.waitForSelector('.stats');
+  const stat = async (label) => page.locator('.stat', { has: page.locator('.stat-label', { hasText: label }) }).innerText();
+  const total = await stat('Total enrolled');
+  expect(/^Total enrolled\s+2\b/.test(total) && /Male\s+1/.test(total) && /Female\s+1/.test(total), `total tile: ${total}`);
+  const age = await stat('Average age');
+  expect(age.includes('52.5') && /Male\s+45\.0/.test(age) && /Female\s+60\.0/.test(age), `age tile: ${age}`);
+  expect(/Dropped out\s+1\b/.test(await stat('Dropped out')), 'dropped tile');
+  expect(/Completed\s+0\b/.test(await stat('Completed')), 'completed tile');
+  const walk = await stat('6MWD average');
+  expect(/Initial\s+387/i.test(walk), `6MWD tile: ${walk}`);
+  expect(await page.locator('.dash-table tbody tr').count() === 2, 'dashboard table rows');
+  await page.screenshot({ path: `${out}/dashboard.png`, fullPage: true });
 } finally {
   await browser.close();
   server.kill();

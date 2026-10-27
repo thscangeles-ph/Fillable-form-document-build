@@ -2,7 +2,8 @@ import { h, todayIso } from './dom.js';
 import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
 import { initInstall, installButton } from './install.js';
-import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS } from './forms.js';
+import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, programStatus, statusLabel } from './forms.js';
+import { renderDashboard, toCsv } from './dashboard.js';
 
 const main = document.getElementById('main');
 const statusEl = document.getElementById('save-status');
@@ -24,7 +25,34 @@ async function route() {
   const [, page, id, tab] = location.hash.split('/');
   window.scrollTo(0, 0);
   if (page === 'patient' && id) return showPatient(decodeURIComponent(id), tab);
+  if (page === 'dashboard') return showDashboard();
   return showList();
+}
+
+const viewSwitch = (active) => h('nav.view-switch', { 'aria-label': 'Views' },
+  h('a', { href: '#/', 'aria-current': active === 'list' ? 'page' : null }, 'Patients'),
+  h('a', { href: '#/dashboard', 'aria-current': active === 'dashboard' ? 'page' : null }, 'Dashboard'));
+
+// ---------- dashboard ----------
+
+const dashFilter = { from: '', to: '' };
+
+async function showDashboard() {
+  setStatus('idle', 'Saved on this device');
+  const patients = await listPatients();
+  const body = h('div');
+  const render = () => body.replaceChildren(renderDashboard(patients, {
+    ...dashFilter,
+    onFilter: (f) => { Object.assign(dashFilter, f); render(); },
+    onExport: (rows) => download(new Blob([`\ufeff${toCsv(rows)}`], { type: 'text/csv' }), `THSC Cardiac Rehab summary ${todayIso()}.csv`),
+  }));
+  render();
+  main.replaceChildren(h('div.page',
+    viewSwitch('dashboard'),
+    h('div.list-head', h('h1.page-title', 'Dashboard')),
+    body,
+    h('p.fine.center', 'Calculated from the patient records on this device. To include other tablets, import their backups here first.'),
+  ));
 }
 
 // ---------- patient list ----------
@@ -50,7 +78,10 @@ async function showList() {
       const f = p.fields;
       const done = sessionsDone(f);
       return h('a.patient-row', { href: `#/patient/${encodeURIComponent(p.id)}` },
-        h('div.pr-name', h('strong', f.pt_name || 'Unnamed patient'), h('span.muted', [f.pt_age && `${f.pt_age} yrs`, f.pt_sex].filter(Boolean).join(' · ') || '—')),
+        h('div.pr-name',
+          h('strong', f.pt_name || 'Unnamed patient'),
+          h('span.muted', [f.pt_age && `${f.pt_age} yrs`, f.pt_sex].filter(Boolean).join(' · ') || '—',
+            programStatus(f) !== 'active' ? h('span.status-chip', { 'data-status': programStatus(f) }, statusLabel(programStatus(f))) : null)),
         h('div.pr-meta', h('span.label', 'Enrolled'), h('span', isoToUs(f.pt_date) || '—')),
         h('div.pr-progress',
           h('span.label', 'Sessions'),
@@ -65,6 +96,7 @@ async function showList() {
   const importInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: onImport });
 
   main.replaceChildren(h('div.page',
+    viewSwitch('list'),
     h('div.list-head',
       h('h1.page-title', 'Patients'),
       h('div.actions',
@@ -186,7 +218,8 @@ async function showPatient(id, tabId) {
     field(ctx, 'pt_age', 'Age', { suffix: 'yrs', inputmode: 'numeric' }),
     field(ctx, 'pt_sex', 'Sex'),
     birthday,
-    field(ctx, 'pt_date', 'Date enrolled'));
+    field(ctx, 'pt_date', 'Date enrolled'),
+    statusField(ctx));
   header.querySelector('#f_pt_name').addEventListener('input', (e) => {
     const el = e.target;
     const caret = el.selectionStart;

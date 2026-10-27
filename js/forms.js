@@ -466,3 +466,28 @@ function sessionForm(ctx, n) {
         grid(2, field(ctx, `${k}_dc_hr`, 'Heart rate', { suffix: 'bpm' }), field(ctx, `${k}_dc_o2`, 'O2 sat')))),
   );
 }
+
+// ---------- program status (app-only; not part of the Word template) ----------
+
+export const STATUSES = [
+  { id: 'active', label: 'In program' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'dropped', label: 'Dropped out' },
+];
+
+// Staff can set the status; otherwise all 12 sessions dated means completed.
+export function programStatus(f) {
+  if (STATUSES.some((s) => s.id === f.program_status)) return f.program_status;
+  return sessionsDone(f) === SESSIONS ? 'completed' : 'active';
+}
+
+export const statusLabel = (id) => STATUSES.find((s) => s.id === id)?.label || id;
+
+export function statusField(ctx) {
+  const select = h('select.input', {
+    id: 'f_program_status',
+    onchange: (e) => ctx.set('program_status', e.target.value),
+  }, STATUSES.map((s) => h('option', { value: s.id }, s.label)));
+  ctx.watch(() => { select.value = programStatus(ctx.fields); });
+  return h('label.field', { for: select.id }, h('span.label', 'Program status'), select);
+}
