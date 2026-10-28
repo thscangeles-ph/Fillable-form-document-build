@@ -14,6 +14,7 @@ Forms (one tab each):
 | 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × lap length (10 m or 20 m) + partial lap |
 | Treatment Plan | Indications, co-morbidities, exam (BMI calculated), GAD-2 and PHQ-2 totals |
 | Exercise Sessions | Sessions 1–12: calisthenics, treadmill, bicycle vitals, Borg scale, symptoms, discharge vitals |
+| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown as-is). Its answers are not saved with the patient or put in the Word file; use its Print / Save as PDF or Copy assessment |
 
 Patient name, age, sex, birthday and enrollment date are entered once and appear on every form.
 
@@ -157,6 +158,7 @@ scripts/copy-web.mjs  copies the web app into desktop/app and mobile/www
 sw.js                 offline cache (bump VERSION when its file list changes)
 manifest.webmanifest  app name, icons, full-screen display
 template/             the Word template
+panels/               stand-alone pages shown in a tab (HEART-SHIELD checklist)
 vendor/jszip.min.js   JSZip 3.10.1 (MIT), for reading/writing .docx
 tests/e2e.mjs         browser test: fills every tab, downloads and checks the .docx
 ```
