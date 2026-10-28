@@ -112,6 +112,7 @@ input.num::-webkit-outer-spin-button, input.num::-webkit-inner-spin-button { -we
 input.num { -moz-appearance: textfield; }
 .with-suffix { display: flex; align-items: center; gap: 10px; }
 .with-suffix .input { flex: 1; min-width: 0; }
+.with-suffix .lap-length { flex: none; width: auto; min-width: 112px; }
 .suffix { color: var(--muted); font-size: 14.5px; font-weight: 600; white-space: nowrap; }
 
 .bp-pair { display: flex; align-items: center; gap: 8px; }

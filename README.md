@@ -11,7 +11,7 @@ Forms (one tab each):
 | --- | --- |
 | Informed Consent | Consent text, program schedule, participant and witness signatures |
 | DASI | 12 Yes/No questions; total, estimated peak VO2 and METs are calculated |
-| 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × 10 + partial lap |
+| 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × lap length (10 m or 20 m) + partial lap |
 | Treatment Plan | Indications, co-morbidities, exam (BMI calculated), GAD-2 and PHQ-2 totals |
 | Exercise Sessions | Sessions 1–12: calisthenics, treadmill, bicycle vitals, Borg scale, symptoms, discharge vitals |
 

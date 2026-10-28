@@ -93,10 +93,14 @@ function bmi(f) {
   return wt / (ht * ht);
 }
 
+// Lap length of the walking course; records from before the choice existed are 10 m.
+export const LAP_LENGTHS = [10, 20];
+export const lapLength = (f) => (Number(f.smwt_lap_length) === 20 ? 20 : 10);
+
 function walkTotal(f) {
   const laps = parseFloat(f.smwt_laps);
   if (Number.isNaN(laps)) return null;
-  return laps * 10 + (parseFloat(f.smwt_partial) || 0);
+  return laps * lapLength(f) + (parseFloat(f.smwt_partial) || 0);
 }
 
 // Values the template expects to be calculated; empty string clears a stale result.
@@ -333,10 +337,39 @@ function walkTab(ctx) {
       field(ctx, 'smwt_symptoms', 'Other symptoms at end of test')),
     card('Distance',
       grid(3,
-        field(ctx, 'smwt_laps', 'Number of laps', { suffix: '× 10 m' }),
-        field(ctx, 'smwt_partial', 'Final partial lap'),
-        computed(ctx, 'Total distance in 6 minutes', () => [ctx.fields.smwt_total ? `${ctx.fields.smwt_total} m` : '', 'laps × 10 + partial lap'], 'accent'))),
+        lapsField(ctx),
+        partialLapField(ctx),
+        computed(ctx, 'Total distance in 6 minutes', () => [ctx.fields.smwt_total ? `${ctx.fields.smwt_total} m` : '', `laps × ${lapLength(ctx.fields)} + partial lap`], 'accent'))),
   );
+}
+
+// Number of laps, with the course's lap length chosen beside it.
+function lapsField(ctx) {
+  const length = h('select.input.lap-length', {
+    id: 'f_smwt_lap_length',
+    'aria-label': 'Lap length',
+    onchange: (e) => ctx.set('smwt_lap_length', e.target.value),
+  }, LAP_LENGTHS.map((n) => h('option', { value: String(n), selected: lapLength(ctx.fields) === n }, `× ${n} m`)));
+  return h('div.field',
+    h('label.label', { for: 'f_smwt_laps' }, 'Number of laps'),
+    h('div.with-suffix', field(ctx, 'smwt_laps', null), length));
+}
+
+// The final partial lap can be anything shorter than one lap: 0–9 m or 0–19 m.
+function partialLapField(ctx) {
+  const select = h('select.input', { id: 'f_smwt_partial', onchange: (e) => ctx.set('smwt_partial', e.target.value) });
+  select.dataset.tag = 'smwt_partial';
+  let shownFor = null;
+  ctx.watch(() => {
+    const n = lapLength(ctx.fields);
+    if (n === shownFor) return;
+    shownFor = n;
+    const options = Array.from({ length: n }, (_, i) => `${i} m`);
+    const current = ctx.fields.smwt_partial || '';
+    select.replaceChildren(h('option', { value: '' }, '—'), ...options.map((o) => h('option', { value: o, selected: o === current }, o)));
+    if (current && !options.includes(current)) ctx.set('smwt_partial', '');
+  });
+  return h('label.field', { for: select.id }, h('span.label', 'Final partial lap'), select);
 }
 
 function screenCard(ctx, title, prefix, questions) {

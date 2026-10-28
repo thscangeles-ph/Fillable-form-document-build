@@ -78,12 +78,17 @@ export async function buildDocx(values, signatures = {}) {
       display = isoToUs(value);
       child(pr, W, 'date').setAttributeNS(W, 'w:fullDate', `${value}T00:00:00Z`);
     } else if (info.kind === 'dropdown') {
-      display = matchOption(info.options, value) ?? display;
-      child(pr, W, 'dropDownList').setAttributeNS(W, 'w:lastValue', display);
+      // Values outside the template's list (e.g. a 15 m partial lap on a 20 m course) go in as plain text.
+      const match = matchOption(info.options, value);
+      if (match !== null) {
+        display = match;
+        child(pr, W, 'dropDownList').setAttributeNS(W, 'w:lastValue', display);
+      }
     }
     setText(sdt, pr, display, info.multiline);
   }
 
+  setLapLength(doc, Number(values.smwt_lap_length) === 20 ? 20 : 10);
   removeMacroLeftovers(doc);
   await placeSignatures(zip, doc, signatures);
 
@@ -145,6 +150,14 @@ async function fillBoundData(zip, values) {
     if (el && v) el.textContent = schema[tag]?.kind === 'date' ? isoToUs(v) : String(v);
   }
   zip.file(path, new XMLSerializer().serializeToString(xml));
+}
+
+// The 6 Minute Walk page prints "(x 10 meters)" after the lap count.
+function setLapLength(doc, meters) {
+  if (meters === 10) return;
+  for (const t of doc.getElementsByTagNameNS(W, 't')) {
+    if (t.textContent.includes('(x 10 meters)')) t.textContent = t.textContent.replace('(x 10 meters)', `(x ${meters} meters)`);
+  }
 }
 
 // The template's SAVE / CALCULATE buttons call macros a .dotx cannot carry.
