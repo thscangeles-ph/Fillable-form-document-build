@@ -224,6 +224,25 @@ try {
   expect(ct.includes('document.main+xml') && !ct.includes('template.main+xml'), 'saved as a document');
   console.log(`docx: ${file}`);
 
+  // PDF: same forms, built on the device.
+  const [pdfDl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.getByRole('button', { name: 'Download PDF' }).click()]);
+  const pdfFile = path.join(out, pdfDl.suggestedFilename());
+  await pdfDl.saveAs(pdfFile);
+  expect(pdfDl.suggestedFilename().endsWith('.pdf') && pdfDl.suggestedFilename().startsWith('JOVEN SAMILLANO - '), `pdf name: ${pdfDl.suggestedFilename()}`);
+  expect(readFileSync(pdfFile).subarray(0, 5).toString() === '%PDF-', 'PDF file starts with %PDF-');
+  expect(await page.getByRole('button', { name: 'Download PDF' }).isEnabled(), 'PDF button usable again');
+  try {
+    const { execFileSync } = await import('node:child_process');
+    const text = execFileSync('pdftotext', ['-layout', pdfFile, '-'], { encoding: 'utf8' });
+    for (const t of ['Informed Consent for Participation', 'Duke Activity Status Index (DASI)', '6 Minute Walk Test Results', 'Individualized Treatment Plan',
+      'Exercise Monitoring Sheet', 'Heart Failure Vaccination Eligibility Checklist', 'Patient: JOVEN SAMILLANO', '23.45', '387', 'Session # 12', 'Page 1 of']) {
+      expect(text.includes(t), `PDF contains "${t}"`);
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err; // pdftotext not installed: skip the text checks
+  }
+  console.log(`pdf: ${pdfFile}`);
+
   // Finalized signature survives a reload and stays locked.
   await page.goto(`http://127.0.0.1:${PORT}/#/patient/${page.url().split('/patient/')[1].split('/')[0]}/consent`);
   await page.waitForSelector('.sig-lock');

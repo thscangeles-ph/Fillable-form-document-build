@@ -1,7 +1,7 @@
 // Offline support for the installed app.
 // Network first (so updates arrive as soon as the tablet is online), cache as fallback.
 // Bump VERSION when APP_FILES changes; file contents refresh on their own.
-const VERSION = 'v4';
+const VERSION = 'v5';
 const APP_CACHE = `app-${VERSION}`;
 const APP_FILES = [
   './',
@@ -21,10 +21,15 @@ const APP_FILES = [
   'js/forms.js',
   'js/install.js',
   'js/native.js',
+  'js/pdf.js',
   'js/signature.js',
   'js/store.js',
   'js/template.js',
   'vendor/jszip.min.js',
+  'vendor/pdfmake.min.js',
+  'assets/fonts/Arimo-Regular.ttf',
+  'assets/fonts/Arimo-Bold.ttf',
+  'assets/fonts/Arimo-Italic.ttf',
   'template/THSC_Cardiac_Rehab_Forms_BLANK.dotx',
   'panels/heart-shield.html',
   'assets/logo.png',
