@@ -14,7 +14,7 @@ Forms (one tab each):
 | 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × lap length (10 m or 20 m) + partial lap |
 | Treatment Plan | Indications, co-morbidities, exam (BMI calculated), GAD-2 and PHQ-2 totals |
 | Exercise Sessions | Sessions 1–12: calisthenics, treadmill, bicycle vitals, Borg scale, symptoms, discharge vitals |
-| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown unchanged). Its answers and outcome are saved with the patient and filled back in when the tab is opened; they are not part of the Word file (use its Print / Save as PDF) |
+| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown unchanged). Its answers and outcome are saved with the patient, filled back in when the tab is opened, and printed as the last page of the Word file once it has been started |
 
 Patient name, age, sex, birthday and enrollment date are entered once and appear on every form.
 
@@ -132,7 +132,8 @@ input in the app is keyed by the tag of a content control in that template
 4. embeds the signatures as images on their signature lines,
 5. removes the template's SAVE PATIENT FILE / CALCULATE macro buttons — a `.dotx`
    cannot contain macros, and the app now does those calculations itself,
-6. saves the result as a normal `.docx` named `PATIENT NAME - MM-DD-YYYY.docx`.
+6. adds a "Patient: NAME   Age   Enrolled" line under the clinic header, so every page shows whose record it is,
+7. saves the result as a normal `.docx` named `PATIENT NAME - MM-DD-YYYY.docx`.
 
 To change the paper form, edit the template in Word and keep the content-control
 tags the same; the app picks up changed dropdown options automatically.

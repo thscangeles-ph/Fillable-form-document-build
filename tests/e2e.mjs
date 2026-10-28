@@ -172,6 +172,11 @@ try {
   await page.waitForTimeout(600);
   const cleared = await page.evaluate(async () => (await (await import('/js/store.js')).listPatients()).find((p) => p.fields.pt_name === 'JOVEN SAMILLANO').fields.heart_shield);
   expect(cleared === undefined, `Clear form removes saved answers: ${JSON.stringify(cleared)}`);
+  // Answer again so the Word file gets a HEART-SHIELD page.
+  for (const [k, v] of Object.entries(hsAnswers)) await hs.locator(`input[name=${k}][value=${v}] + span`).click();
+  await hs.locator('#phenotype').fill('HFrEF');
+  await hs.locator('#assessor').fill('Dr. A. Reyes');
+  await page.waitForTimeout(600);
   await page.getByRole('tab', { name: /^Exercise Sessions/ }).click();
   await page.getByRole('tab', { name: /^Session 1\b/ }).click();
 
@@ -205,6 +210,13 @@ try {
     expect(got === want, `${tag}: expected "${want}", got "${got}"`);
   }
   expect(!xml.includes('MACROBUTTON'), 'macro buttons removed');
+  const header = await zip.file('word/header1.xml').async('string');
+  expect(header.includes('JOVEN SAMILLANO') && header.includes('10/27/2026'.slice(0, 3)) && header.includes('Enrolled: '), 'patient line in the page header');
+  for (const text of ['Heart Failure Vaccination Eligibility Checklist', 'A. Heart failure &amp; clinical readiness', 'Established diagnosis of heart failure?',
+    'Potentially eligible — verify vaccine-specific schedule', 'HFrEF', 'Dr. A. Reyes', 'Answer']) {
+    expect(xml.includes(text), `HEART-SHIELD page contains "${text}"`);
+  }
+  expect(xml.lastIndexOf('Heart Failure Vaccination Eligibility Checklist') > xml.lastIndexOf('<w:tag w:val="s12_therapist"/>'), 'HEART-SHIELD page comes last');
   expect((xml.match(/rIdSig_/g) || []).length === 3, 'three signatures embedded');
   const custom = await zip.file('customXml/item1.xml').async('string');
   expect(custom.includes('<name>JOVEN SAMILLANO</name>') && custom.includes('<birthday>06/03/1981</birthday>'), `bound data: ${custom}`);

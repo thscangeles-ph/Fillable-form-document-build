@@ -1,6 +1,6 @@
 // The five tabs. Every input is keyed by the Word template's content-control tag.
 import { h, todayIso } from './dom.js';
-import { matchOption } from './template.js';
+import { matchOption, isoToUs } from './template.js';
 import { signaturePad } from './signature.js';
 
 export const DASI_WEIGHTS = [2.75, 1.75, 2.75, 5.5, 8.0, 2.7, 3.5, 8.0, 4.5, 5.25, 6.0, 7.5];
@@ -383,7 +383,21 @@ function readChecklist(doc) {
   const answers = {};
   for (const input of doc.querySelectorAll('input[type=radio]:checked')) answers[input.name] = input.value;
   const text = Object.fromEntries(HS_TEXT.map((id) => [id, doc.getElementById(id)?.value || '']));
-  return { answers, ...text, outcome: doc.querySelector('#result h3')?.textContent || '' };
+  // The question wording is kept too, so the Word page prints exactly what was on screen.
+  const sections = [...doc.querySelectorAll('#sections section')].map((sec) => ({
+    title: sec.querySelector('h2')?.textContent || '',
+    items: [...sec.querySelectorAll('.question')].map((row) => ({
+      q: row.querySelector('.qtext')?.textContent || '',
+      a: row.querySelector('input[type=radio]:checked')?.value || '',
+    })),
+  }));
+  return {
+    answers,
+    ...text,
+    sections,
+    outcome: doc.querySelector('#result h3')?.textContent || '',
+    outcome_detail: doc.querySelector('#result p')?.textContent || '',
+  };
 }
 
 function fillChecklist(doc, saved) {
@@ -401,6 +415,27 @@ function fillChecklist(doc, saved) {
   }
 }
 
+// The checklist as an extra page for the Word file, or null when it hasn't been started.
+export function heartShieldPage(f) {
+  const hs = f.heart_shield;
+  if (!hs) return null;
+  const answer = (a) => ({ yes: 'Yes', no: 'No', unknown: 'Unknown' }[a] || 'Not answered');
+  const sections = hs.sections?.length
+    ? hs.sections
+    : [{ title: 'Answers', items: Object.entries(hs.answers || {}).map(([q, a]) => ({ q, a })) }];
+  return {
+    title: 'Heart Failure Vaccination Eligibility Checklist',
+    subtitle: 'HEART-SHIELD • Influenza and pneumococcal vaccination screening',
+    info: [
+      [['Patient name or ID', hs.patient || f.pt_name || 'Not provided'], ['Assessment date', isoToUs(hs.date) || 'Not provided']],
+      [['HF phenotype / notes', hs.phenotype || 'Not provided'], ['Assessor', hs.assessor || 'Not provided']],
+    ],
+    groups: sections.map((sec) => ({ heading: sec.title, rows: sec.items.map((it) => [it.q, answer(it.a)]) })),
+    outcome: { title: hs.outcome || 'Assessment incomplete', detail: hs.outcome_detail || '' },
+    note: 'Screening aid only, not an immunization order. Verify local vaccination guidance, product labeling and clinical suitability. Based on the 2026 ESC heart failure vaccination recommendation (influenza and pneumococcal: Class IIa, Level C).',
+  };
+}
+
 // Done once the checklist reaches an outcome (not "incomplete").
 export const heartShieldDone = (f) => !!f.heart_shield?.outcome && !/incomplete/i.test(f.heart_shield.outcome);
 
@@ -414,7 +449,8 @@ function heartShieldTab(ctx) {
     new ResizeObserver(fit).observe(doc.body);
 
     let restoring = true;
-    if (ctx.fields.heart_shield) fillChecklist(doc, ctx.fields.heart_shield);
+    const saved = ctx.fields.heart_shield;
+    if (saved) fillChecklist(doc, saved);
     restoring = false;
 
     const save = () => {
@@ -429,9 +465,11 @@ function heartShieldTab(ctx) {
     doc.addEventListener('input', save);
     // "Clear form" resets the page without firing input events; the outcome box still re-renders.
     new MutationObserver(save).observe(doc.getElementById('result'), { childList: true });
+    // Answers saved before the question wording was kept get it filled in now.
+    if (saved && !saved.sections) save();
   });
   return h('div.tab',
-    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are saved with this patient. Print / Save as PDF or Copy assessment keep a separate copy.'),
+    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are saved with this patient and printed as the last page of Download Word.'),
     frame);
 }
 

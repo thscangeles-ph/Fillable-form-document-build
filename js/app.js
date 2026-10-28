@@ -3,7 +3,7 @@ import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
 import { initInstall, installButton } from './install.js';
 import { isAndroidApp, saveFileAndroid, shareFileAndroid } from './native.js';
-import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel, heartShieldDone } from './forms.js';
+import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel, heartShieldDone, heartShieldPage } from './forms.js';
 import { renderDashboard, toCsv } from './dashboard.js';
 
 const main = document.getElementById('main');
@@ -301,7 +301,7 @@ async function downloadWord(patient, fields) {
   const btn = document.activeElement;
   try {
     if (btn) btn.disabled = true;
-    const blob = await buildDocx(fields, patient.signatures);
+    const blob = await buildDocx(fields, patient.signatures, [heartShieldPage(fields)].filter(Boolean));
     const name = (fields.pt_name || 'Patient').replace(/[\\/:*?"<>|]+/g, ' ').trim();
     const date = isoToUs(fields.pt_date || todayIso()).replace(/\//g, '-');
     download(blob, `${name} - ${date}.docx`);

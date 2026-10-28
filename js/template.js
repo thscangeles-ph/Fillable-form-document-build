@@ -58,7 +58,7 @@ export function isoToUs(iso) {
  * values: { tag: string|boolean }  (dates as yyyy-mm-dd, checkboxes as booleans)
  * signatures: { participant?, witness?, dasi? } each { png: dataURL, date: yyyy-mm-dd }
  */
-export async function buildDocx(values, signatures = {}) {
+export async function buildDocx(values, signatures = {}, pages = []) {
   await loadTemplate();
   const zip = await JSZip.loadAsync(templateBytes);
   const doc = parseXml(await zip.file('word/document.xml').async('string'));
@@ -91,9 +91,11 @@ export async function buildDocx(values, signatures = {}) {
   setLapLength(doc, Number(values.smwt_lap_length) === 20 ? 20 : 10);
   removeMacroLeftovers(doc);
   await placeSignatures(zip, doc, signatures);
+  for (const page of pages) appendPage(doc, page);
 
   zip.file('word/document.xml', new XMLSerializer().serializeToString(doc));
   await fillBoundData(zip, values);
+  await addHeaderPatientLine(zip, values);
   // A filled copy is a document, not a template.
   const ctPath = '[Content_Types].xml';
   const ct = await zip.file(ctPath).async('string');
@@ -152,6 +154,36 @@ async function fillBoundData(zip, values) {
   zip.file(path, new XMLSerializer().serializeToString(xml));
 }
 
+// Puts "Patient: NAME   Age: 45   Enrolled: 10/27/2026" under the clinic header, so every
+// page (continuation pages included) shows whose record it is.
+async function addHeaderPatientLine(zip, values) {
+  if (!values.pt_name) return;
+  const parts = [
+    ['Patient', values.pt_name],
+    ['Age', values.pt_age],
+    ['Enrolled', isoToUs(values.pt_date)],
+  ].filter(([, v]) => v);
+  for (const path of Object.keys(zip.files).filter((f) => /^word\/header\d*\.xml$/.test(f))) {
+    const hdr = parseXml(await zip.file(path).async('string'));
+    const anchor = [...hdr.getElementsByTagNameNS(W, 't')].find((t) => t.textContent.includes('CARDIAC REHABILITATION PROGRAM'));
+    if (!anchor) continue;
+    const runs = [];
+    parts.forEach(([label, value], i) => {
+      if (i) runs.push(run(hdr, '      ', { sz: 17 }));
+      runs.push(run(hdr, `${label}: `, { b: true, sz: 17 }), run(hdr, String(value), { sz: 17 }));
+    });
+    const line = el(hdr, 'p', {},
+      el(hdr, 'pPr', {},
+        el(hdr, 'pBdr', {}, el(hdr, 'bottom', { val: 'single', sz: 4, space: 2, color: 'BFBFBF' })),
+        el(hdr, 'spacing', { before: 40, after: 0 }),
+        el(hdr, 'jc', { val: 'center' })),
+      runs);
+    const p = ancestor(anchor, W, 'p');
+    p.parentNode.insertBefore(line, p.nextSibling);
+    zip.file(path, new XMLSerializer().serializeToString(hdr));
+  }
+}
+
 // The 6 Minute Walk page prints "(x 10 meters)" after the lap count.
 function setLapLength(doc, meters) {
   if (meters === 10) return;
@@ -179,6 +211,94 @@ function removeMacroLeftovers(doc) {
       p.parentNode.removeChild(p);
     }
   }
+}
+
+// ---------- extra pages ----------
+
+// Builds a page in the template's style (centered bold title, black-ruled tables with a
+// beige header row) after the last form. page: { title, subtitle, info: [[[label, value], …], …],
+// groups: [{ heading, rows: [[question, answer], …] }], outcome: { title, detail }, note }
+const PAGE_WIDTH = 10386;
+const HEADER_FILL = 'F3E7C6';
+const GOLD = 'C9971C';
+
+function appendPage(doc, page) {
+  const body = doc.getElementsByTagNameNS(W, 'body')[0];
+  const sectPr = [...body.children].find((c) => c.localName === 'sectPr');
+  const add = (node) => body.insertBefore(node, sectPr);
+  const P = (runs, opts) => para(doc, runs, opts);
+  const R = (text, opts) => run(doc, text, opts);
+
+  add(P([R(page.title, { b: true, sz: 30 })], { pageBreak: true, keepNext: true, align: 'center', before: 60, after: 60 }));
+  if (page.subtitle) add(P([R(page.subtitle, { sz: 17, color: '666666' })], { align: 'center', after: 200 }));
+  for (const line of page.info || []) {
+    const runs = [];
+    line.forEach(([label, value], i) => {
+      if (i) runs.push(R('      '));
+      runs.push(R(`${label}: `, { b: true }), R(value));
+    });
+    add(P(runs, { after: 100 }));
+  }
+  for (const g of page.groups || []) {
+    add(P([], { after: 60 }));
+    add(table(doc, g));
+  }
+  add(P([R('Screening outcome', { b: true, sz: 22 })], { before: 280, after: 80, keepNext: true }));
+  add(P([R(page.outcome.title, { b: true, sz: 22 })], { shade: HEADER_FILL, leftBar: GOLD, keepNext: !!page.outcome.detail, after: 0 }));
+  if (page.outcome.detail) add(P([R(page.outcome.detail)], { shade: HEADER_FILL, leftBar: GOLD, after: 0 }));
+  if (page.note) add(P([R(page.note, { i: true, sz: 16, color: '666666' })], { before: 240 }));
+}
+
+function table(doc, group) {
+  const widths = [PAGE_WIDTH - 1800, 1800];
+  const border = (name) => el(doc, name, { val: 'single', sz: 4, space: 0, color: '000000' });
+  const cell = (text, i, { header = false } = {}) => el(doc, 'tc', {},
+    el(doc, 'tcPr', {},
+      el(doc, 'tcW', { w: widths[i], type: 'dxa' }),
+      header ? el(doc, 'shd', { val: 'clear', color: 'auto', fill: HEADER_FILL }) : null,
+      el(doc, 'vAlign', { val: 'center' })),
+    para(doc, [run(doc, text, { b: header, sz: 19 })], { align: i ? 'center' : null, after: 0 }));
+  const row = (cells, header) => el(doc, 'tr', {},
+    el(doc, 'trPr', {}, el(doc, 'cantSplit'), header ? el(doc, 'tblHeader') : el(doc, 'trHeight', { val: 400, hRule: 'atLeast' })),
+    cells.map((t, i) => cell(t, i, { header })));
+  return el(doc, 'tbl', {},
+    el(doc, 'tblPr', {},
+      el(doc, 'tblW', { w: PAGE_WIDTH, type: 'dxa' }),
+      el(doc, 'tblBorders', {}, ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(border)),
+      el(doc, 'tblLayout', { type: 'fixed' }),
+      el(doc, 'tblCellMar', {}, el(doc, 'top', { w: 40, type: 'dxa' }), el(doc, 'left', { w: 80, type: 'dxa' }), el(doc, 'bottom', { w: 40, type: 'dxa' }), el(doc, 'right', { w: 80, type: 'dxa' }))),
+    el(doc, 'tblGrid', {}, widths.map((w) => el(doc, 'gridCol', { w }))),
+    row([group.heading, 'Answer'], true),
+    group.rows.map((r) => row(r, false)));
+}
+
+function para(doc, runs, { align = null, before = 0, after = 100, pageBreak = false, keepNext = false, shade = null, leftBar = null } = {}) {
+  // Child order follows the schema: keepNext, pageBreakBefore, pBdr, shd, spacing, jc.
+  const pPr = el(doc, 'pPr', {},
+    keepNext ? el(doc, 'keepNext') : null,
+    pageBreak ? el(doc, 'pageBreakBefore') : null,
+    leftBar ? el(doc, 'pBdr', {}, el(doc, 'left', { val: 'single', sz: 24, space: 8, color: leftBar })) : null,
+    shade ? el(doc, 'shd', { val: 'clear', color: 'auto', fill: shade }) : null,
+    el(doc, 'spacing', { before, after }),
+    align ? el(doc, 'jc', { val: align }) : null);
+  return el(doc, 'p', {}, pPr, runs);
+}
+
+function run(doc, text, { b = false, i = false, sz = 20, color = null } = {}) {
+  const t = doc.createElementNS(W, 'w:t');
+  t.setAttribute('xml:space', 'preserve');
+  t.textContent = text;
+  return el(doc, 'r', {},
+    el(doc, 'rPr', {}, b ? el(doc, 'b') : null, i ? el(doc, 'i') : null, color ? el(doc, 'color', { val: color }) : null,
+      el(doc, 'sz', { val: sz }), el(doc, 'szCs', { val: sz })),
+    t);
+}
+
+function el(doc, name, attrs = {}, ...children) {
+  const e = doc.createElementNS(W, `w:${name}`);
+  for (const [k, v] of Object.entries(attrs)) e.setAttributeNS(W, `w:${k}`, String(v));
+  for (const c of children.flat(Infinity)) if (c) e.appendChild(c);
+  return e;
 }
 
 // ---------- signatures ----------
