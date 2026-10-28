@@ -11,7 +11,7 @@ Forms (one tab each):
 | --- | --- |
 | Informed Consent | Consent text, program schedule, participant and witness signatures |
 | DASI | 12 Yes/No questions; total, estimated peak VO2 and METs are calculated |
-| 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × 10 + partial lap |
+| 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × lap length (10 m or 20 m) + partial lap |
 | Treatment Plan | Indications, co-morbidities, exam (BMI calculated), GAD-2 and PHQ-2 totals |
 | Exercise Sessions | Sessions 1–12: calisthenics, treadmill, bicycle vitals, Borg scale, symptoms, discharge vitals |
 
@@ -44,6 +44,40 @@ working without internet (Download Word included).
 - **Windows / Mac:** in Chrome or Edge, click the install icon in the address bar.
 
 Updates install themselves the next time the app is opened while online.
+
+## Installers (Windows PC and Android)
+
+Besides the website, the app comes as installable programs that carry all their files,
+so they work fully offline:
+
+- **Windows:** `THSC-Cardiac-Rehab-Setup-<version>.exe` (Electron, in `desktop/`)
+- **Android tablet / phone:** `THSC-Cardiac-Rehab-<version>.apk` (Capacitor, in `mobile/`)
+
+Download them from the repository's **Releases** page.
+- **Windows:** the installer isn't code-signed, so Windows may say "Windows protected your PC";
+  click **More info → Run anyway**.
+- **Android:** open the APK on the device and allow "Install unknown apps" when asked.
+
+iPad and iPhone can't take an installer outside the App Store, so on Apple devices keep using
+Safari → **Add to Home Screen**.
+
+**Records are per app.** The Windows app, the Android app and the website each keep their own
+records. Move them with Export/Share backup → Import backup.
+
+### Building a release
+
+Push a version tag; GitHub Actions builds both installers and publishes them:
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+The Android build needs two repository secrets (Settings → Secrets and variables → Actions):
+`ANDROID_KEYSTORE_BASE64` (the release keystore, base64) and `ANDROID_KEYSTORE_PASSWORD`.
+Keep the keystore safe: Android only installs an update signed with the same key. Without the
+secrets the Windows installer is still published.
+
+To try the desktop app locally: `cd desktop && npm install && npm start`.
 
 ## Running it
 
@@ -114,6 +148,12 @@ js/template.js        reads and fills the Word template
 js/signature.js       signature pad
 js/store.js           IndexedDB storage
 js/install.js         install button, service worker registration, persistent storage
+js/native.js          saving and sharing files inside the Android app
+css/fonts.css         bundled Fraunces and Lexend fonts (assets/fonts, SIL OFL)
+desktop/              Windows app (Electron) and installer settings
+mobile/               Android app (Capacitor); android/ is the Gradle project
+scripts/copy-web.mjs  copies the web app into desktop/app and mobile/www
+.github/workflows/    builds the installers on version tags
 sw.js                 offline cache (bump VERSION when its file list changes)
 manifest.webmanifest  app name, icons, full-screen display
 template/             the Word template

@@ -1,0 +1,6 @@
+# Only the web app is deployed; installer projects and tests stay out.
+desktop/
+mobile/
+scripts/
+tests/
+.github/

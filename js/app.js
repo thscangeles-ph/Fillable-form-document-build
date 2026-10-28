@@ -2,6 +2,7 @@ import { h, todayIso } from './dom.js';
 import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
 import { initInstall, installButton } from './install.js';
+import { isAndroidApp, saveFileAndroid, shareFileAndroid } from './native.js';
 import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel } from './forms.js';
 import { renderDashboard, toCsv } from './dashboard.js';
 
@@ -132,6 +133,7 @@ async function exportAll() {
 const shareFile = (text) => new File([text], `THSC Cardiac Rehab backup ${todayIso()}.txt`, { type: 'text/plain' });
 
 function canShareFiles() {
+  if (isAndroidApp()) return true;
   try {
     return !!navigator.canShare?.({ files: [shareFile('{}')] });
   } catch {
@@ -141,7 +143,9 @@ function canShareFiles() {
 
 async function shareBackup() {
   try {
-    await navigator.share({ files: [shareFile(await backupJson())], title: 'THSC Cardiac Rehab backup' });
+    const file = shareFile(await backupJson());
+    if (isAndroidApp()) await shareFileAndroid(file, file.name, 'THSC Cardiac Rehab backup');
+    else await navigator.share({ files: [file], title: 'THSC Cardiac Rehab backup' });
   } catch (err) {
     if (err.name !== 'AbortError') toast(`Could not share: ${err.message}`, true);
   }
@@ -319,7 +323,15 @@ async function removePatient(patient, cancelSave) {
 
 // ---------- utilities ----------
 
-function download(blob, filename) {
+async function download(blob, filename) {
+  if (isAndroidApp()) {
+    try {
+      toast(`${await saveFileAndroid(blob, filename)}: ${filename}`);
+    } catch (err) {
+      toast(`Could not save ${filename}: ${err.message}`, true);
+    }
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = h('a', { href: url, download: filename });
   document.body.appendChild(a);

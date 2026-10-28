@@ -1,5 +1,8 @@
 // Installable-app support: service worker, "Install app" button, persistent storage.
 import { h } from './dom.js';
+import { isAndroidApp, isDesktopApp } from './native.js';
+
+const installedApp = () => isAndroidApp() || isDesktopApp();
 
 let deferredPrompt = null;
 const listeners = new Set();
@@ -9,6 +12,11 @@ const isStandalone = () => matchMedia('(display-mode: standalone)').matches || n
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 export function initInstall(toast) {
+  if (installedApp()) {
+    // The Windows and Android apps ship their files; no offline cache or install prompt needed.
+    navigator.storage?.persist?.().catch(() => {});
+    return;
+  }
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
@@ -30,7 +38,7 @@ export function initInstall(toast) {
 // A button that appears only when the app can be installed on this device.
 export function installButton() {
   const btn = h('button.btn.btn-ghost', { type: 'button', onclick: install }, 'Install app');
-  const update = () => { btn.hidden = isStandalone() || !(deferredPrompt || isIos()); };
+  const update = () => { btn.hidden = installedApp() || isStandalone() || !(deferredPrompt || isIos()); };
   listeners.add(update);
   update();
   return btn;

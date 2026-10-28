@@ -89,6 +89,18 @@ try {
   await select('smwt_o2_baseline', '98%');
   await fill('smwt_laps', '38');
   await select('smwt_partial', '7 m');
+  // 20 m course: total uses 20 m laps and the partial lap can go up to 19 m.
+  const walkTotalText = () => page.locator('.computed', { hasText: 'Total distance' }).locator('.computed-value').textContent();
+  await page.selectOption('#f_smwt_lap_length', '20');
+  expect((await walkTotalText()) === '767 m', `20 m laps total: ${await walkTotalText()}`);
+  expect(await page.locator('#f_smwt_partial option').count() === 21, '20 m course offers 0-19 m partial laps');
+  await select('smwt_partial', '15 m');
+  expect((await walkTotalText()) === '775 m', `20 m laps + 15 m: ${await walkTotalText()}`);
+  // Back to 10 m: a 15 m partial lap no longer fits and is cleared.
+  await page.selectOption('#f_smwt_lap_length', '10');
+  expect((await page.inputValue('#f_smwt_partial')) === '', 'out-of-range partial lap cleared');
+  await select('smwt_partial', '7 m');
+  expect((await walkTotalText()) === '387 m', `10 m laps total: ${await walkTotalText()}`);
   await select('smwt_stopped', 'No');
   await page.screenshot({ path: `${out}/walk.png`, fullPage: true });
 

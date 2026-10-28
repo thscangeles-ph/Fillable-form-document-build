@@ -1,0 +1,36 @@
+{
+  "name": "thsc-cardiac-rehab-forms",
+  "productName": "THSC Cardiac Rehab Forms",
+  "version": "1.0.0",
+  "description": "THSC Cardiac Rehabilitation Program forms",
+  "author": "The Heart Specialists Clinic and Diagnostic Center",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "prepare-web": "node ../scripts/copy-web.mjs app",
+    "start": "npm run prepare-web && electron .",
+    "dist": "npm run prepare-web && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "ph.thsc.cardiacrehab",
+    "productName": "THSC Cardiac Rehab Forms",
+    "copyright": "The Heart Specialists Clinic and Diagnostic Center",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "app/**/*"],
+    "win": { "target": "nsis", "icon": "build/icon.png" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "THSC Cardiac Rehab",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "THSC-Cardiac-Rehab-Setup-${version}.exe"
+    }
+  }
+}
