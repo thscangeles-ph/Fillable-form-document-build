@@ -374,8 +374,37 @@ function partialLapField(ctx) {
 }
 
 // The clinic's HEART-SHIELD checklist, shown as-is from panels/heart-shield.html.
-// It keeps its own answers in the page, so nothing is saved with the patient.
-function heartShieldTab() {
+// The file is left unchanged: the app reads its answers from the page whenever they
+// change, saves them with the patient (fields.heart_shield), and fills them back in
+// when the tab is opened again.
+const HS_TEXT = ['patient', 'date', 'phenotype', 'assessor'];
+
+function readChecklist(doc) {
+  const answers = {};
+  for (const input of doc.querySelectorAll('input[type=radio]:checked')) answers[input.name] = input.value;
+  const text = Object.fromEntries(HS_TEXT.map((id) => [id, doc.getElementById(id)?.value || '']));
+  return { answers, ...text, outcome: doc.querySelector('#result h3')?.textContent || '' };
+}
+
+function fillChecklist(doc, saved) {
+  for (const id of HS_TEXT) {
+    const el = doc.getElementById(id);
+    if (!el || saved[id] === undefined) continue;
+    el.value = saved[id];
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  for (const [name, value] of Object.entries(saved.answers || {})) {
+    const radio = doc.querySelector(`input[type=radio][name="${CSS.escape(name)}"][value="${CSS.escape(value)}"]`);
+    if (!radio) continue;
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+}
+
+// Done once the checklist reaches an outcome (not "incomplete").
+export const heartShieldDone = (f) => !!f.heart_shield?.outcome && !/incomplete/i.test(f.heart_shield.outcome);
+
+function heartShieldTab(ctx) {
   const frame = h('iframe.panel-frame', { src: 'panels/heart-shield.html', title: 'HEART-SHIELD heart failure vaccination eligibility checklist' });
   frame.addEventListener('load', () => {
     const doc = frame.contentDocument;
@@ -383,9 +412,26 @@ function heartShieldTab() {
     const fit = () => { frame.style.height = `${doc.documentElement.scrollHeight}px`; };
     fit();
     new ResizeObserver(fit).observe(doc.body);
+
+    let restoring = true;
+    if (ctx.fields.heart_shield) fillChecklist(doc, ctx.fields.heart_shield);
+    restoring = false;
+
+    const save = () => {
+      if (restoring) return;
+      const now = readChecklist(doc);
+      const empty = !Object.keys(now.answers).length && !now.patient && !now.phenotype && !now.assessor;
+      const next = empty ? '' : now;
+      if (JSON.stringify(next || null) === JSON.stringify(ctx.fields.heart_shield || null)) return;
+      ctx.set('heart_shield', next);
+    };
+    doc.addEventListener('change', save);
+    doc.addEventListener('input', save);
+    // "Clear form" resets the page without firing input events; the outcome box still re-renders.
+    new MutationObserver(save).observe(doc.getElementById('result'), { childList: true });
   });
   return h('div.tab',
-    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are not saved with the patient: use Print / Save as PDF or Copy assessment to keep a record.'),
+    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are saved with this patient. Print / Save as PDF or Copy assessment keep a separate copy.'),
     frame);
 }
 
