@@ -94,12 +94,26 @@ jobs:
             echo "::error::Repository secret(s) not available to this build:$missing. Add them under Settings > Secrets and variables > Actions > Repository secrets."
             exit 1
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          # Pasting can add spaces or line breaks; base64 has neither, so drop them.
+          keystore=$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')
+          echo "Keystore secret: ${#keystore} characters after removing spaces and line breaks."
+          if ! printf '%s' "$keystore" | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 (${#keystore} characters). Paste the whole value again, from the first to the last character."
+            exit 1
+          fi
+          password=$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n')
+          echo "::add-mask::$password"
+          if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$password" >/dev/null 2>&1; then
+            echo "::error::The signing key could not be opened with ANDROID_KEYSTORE_PASSWORD: the password is wrong, or ANDROID_KEYSTORE_BASE64 is incomplete."
+            exit 1
+          fi
+          echo "Signing key opened with the password."
+          echo "ANDROID_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
       - name: Build the APK
         working-directory: mobile/android
         env:
+          # ANDROID_KEYSTORE_PASSWORD comes from the step above (checked, line breaks removed).
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           chmod +x gradlew
