@@ -120,6 +120,16 @@ being used**. Nothing is sent to a server. This means:
 
 The downloaded Word file is the record to keep in the patient's chart.
 
+## Download PDF
+
+**Download PDF** (next to Download Word) makes a PDF of the same forms on the device, with
+no internet needed and nothing sent anywhere. `js/pdf.js` lays the forms out with
+[pdfmake](http://pdfmake.org) (MIT, `vendor/pdfmake.min.js`) using the Arimo font (SIL OFL,
+metric-compatible with Arial). It follows the Word template's look: clinic header and patient
+line on every page, "Page X of Y", the same forms in the same order, signatures, and the
+HEART-SHIELD page. It is a separate layout, so it is close to the Word file rather than
+identical. pdfmake and the fonts load only the first time a PDF is made.
+
 ## How Download Word works
 
 `template/THSC_Cardiac_Rehab_Forms_BLANK.dotx` is the original Word template. Each
@@ -147,6 +157,7 @@ js/app.js             routing, patient list, patient page, save / download / del
 js/forms.js           the five tabs, the calculations and program status
 js/dashboard.js       dashboard figures, patient table and CSV export
 js/template.js        reads and fills the Word template
+js/pdf.js             builds the PDF version of the forms (pdfmake)
 js/signature.js       signature pad
 js/store.js           IndexedDB storage
 js/install.js         install button, service worker registration, persistent storage
@@ -161,6 +172,7 @@ manifest.webmanifest  app name, icons, full-screen display
 template/             the Word template
 panels/               stand-alone pages shown in a tab (HEART-SHIELD checklist)
 vendor/jszip.min.js   JSZip 3.10.1 (MIT), for reading/writing .docx
+vendor/pdfmake.min.js pdfmake 0.2.15 (MIT), for the PDF
 tests/e2e.mjs         browser test: fills every tab, downloads and checks the .docx
 ```
 

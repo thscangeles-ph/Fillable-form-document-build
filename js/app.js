@@ -5,6 +5,7 @@ import { initInstall, installButton } from './install.js';
 import { isAndroidApp, saveFileAndroid, shareFileAndroid } from './native.js';
 import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel, heartShieldDone, heartShieldPage } from './forms.js';
 import { renderDashboard, toCsv } from './dashboard.js';
+import { buildPdf } from './pdf.js';
 
 const main = document.getElementById('main');
 const statusEl = document.getElementById('save-status');
@@ -266,7 +267,8 @@ async function showPatient(id, tabId) {
       h('a.btn.btn-ghost.back', { href: '#/' }, '← Patients'),
       title,
       h('div.actions',
-        h('button.btn.btn-primary', { type: 'button', onclick: () => downloadWord(patient, fields) }, 'Download Word'),
+        h('button.btn.btn-primary', { type: 'button', onclick: (e) => downloadWord(patient, fields, e.currentTarget) }, 'Download Word'),
+        h('button.btn.btn-primary', { type: 'button', onclick: (e) => downloadPdf(patient, e.currentTarget) }, 'Download PDF'),
         h('button.btn.btn-danger', { type: 'button', onclick: () => removePatient(patient, () => clearTimeout(saveTimer)) }, 'Delete'))),
     header,
     tabs,
@@ -297,19 +299,34 @@ function tabBadge(id, f, p) {
   return done ? h('span.badge.ok', { 'aria-label': 'complete' }, '✓') : null;
 }
 
-async function downloadWord(patient, fields) {
-  const btn = document.activeElement;
+// "PATIENT NAME - MM-DD-YYYY", the name the template's save button used.
+function fileBase(fields) {
+  const name = (fields.pt_name || 'Patient').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  const date = isoToUs(fields.pt_date || todayIso()).replace(/\//g, '-');
+  return `${name} - ${date}`;
+}
+
+// btn is the clicked button; it shows "Preparing…" until the file is ready.
+async function makeFile(btn, kind, build, filename) {
+  const text = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
   try {
-    if (btn) btn.disabled = true;
-    const blob = await buildDocx(fields, patient.signatures, [heartShieldPage(fields)].filter(Boolean));
-    const name = (fields.pt_name || 'Patient').replace(/[\\/:*?"<>|]+/g, ' ').trim();
-    const date = isoToUs(fields.pt_date || todayIso()).replace(/\//g, '-');
-    download(blob, `${name} - ${date}.docx`);
+    await download(await build(), filename);
   } catch (err) {
-    toast(`Could not create the Word file: ${err.message}`, true);
+    toast(`Could not create the ${kind}: ${err.message}`, true);
   } finally {
-    if (btn) btn.disabled = false;
+    btn.disabled = false;
+    btn.textContent = text;
   }
+}
+
+function downloadWord(patient, fields, btn) {
+  return makeFile(btn, 'Word file', () => buildDocx(fields, patient.signatures, [heartShieldPage(fields)].filter(Boolean)), `${fileBase(fields)}.docx`);
+}
+
+function downloadPdf(patient, btn) {
+  return makeFile(btn, 'PDF', () => buildPdf(patient), `${fileBase(patient.fields)}.pdf`);
 }
 
 async function removePatient(patient, cancelSave) {

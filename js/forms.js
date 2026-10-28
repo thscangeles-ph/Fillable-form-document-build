@@ -4,7 +4,7 @@ import { matchOption, isoToUs } from './template.js';
 import { signaturePad } from './signature.js';
 
 export const DASI_WEIGHTS = [2.75, 1.75, 2.75, 5.5, 8.0, 2.7, 3.5, 8.0, 4.5, 5.25, 6.0, 7.5];
-const DASI_QUESTIONS = [
+export const DASI_QUESTIONS = [
   'Can you take care of yourself (eating, dressing, bathing or using the toilet)?',
   'Can you walk indoors such as around your house?',
   'Can you walk a block or two on level ground?',
@@ -19,7 +19,7 @@ const DASI_QUESTIONS = [
   'Can you participate in strenuous sports like swimming, singles tennis, football, basketball, or skiing?',
 ];
 
-const CONSENT = [
+export const CONSENT = [
   ['1. Explanation of Outpatient Cardiac Rehabilitation Program', 'You will be placed in a rehabilitation program that will include physical exercises, educational activities, and other health-related services. The levels of exercise that you will undertake will be based on your cardiovascular response to an exercise test and other clinical information. You will be given clear instructions regarding the amount and kind of regular exercise you should do. The program staff, depending on your progress, may adjust your exercise sessions. This program is 12 sessions in duration, and you will undergo a reevaluation with a graded exercise test after the completion of the rehabilitation program as deemed needed by the Cardiac Rehabilitation Specialist. Other tests may be recommended as needed.'],
   ['2. Monitoring Your Vital Signs.', 'Your vital signs will be monitored as required. You agree to have your blood pressure, pulse rate, and oxygen saturation taken before, during, and after each exercise session by program staff members. You agree to report to the rehabilitation staff any unusual or worsened symptoms associated with your exercise program. These include, but are not limited to, unusual shortness of breath with low level activity, pain, pressure, tightness, unusually fast, slow or irregular heart rate, faintness or dizziness.'],
   ['3. Participant Risks and Discomforts.', 'There exists the possibility of certain changes occurring during exercise sessions. These include abnormal blood pressure response, fainting, irregular, fast or slow heart rhythm, and in very rare instances, heart attack (1 per 294,000 hours of exercise), stroke, or death (1 per 784,000 hours of exercise). Every effort will be made to minimize those risks by provision of appropriate exercise instruction and supervision. Emergency equipment and trained personnel are available to deal with unusual situations that may arise.'],
@@ -42,12 +42,12 @@ const CONSENT = [
   ['8. Freedom of Consent', 'I agree to voluntarily participate in the Cardiac Rehabilitation Program. I understand that I am free to deny any consent if I so desire, both now and at any point in the program. I acknowledge that I have read this form in its entirety or it has been read to me, and I understand my responsibility in the Rehabilitation Program in which I will be engaged. I accept the risks, rules, and regulations set forth and I understand and appreciate the consequences of my decision. Knowing these, and having had an opportunity to ask questions which have been answered to my satisfaction, I consent to treatment and participation in this Rehabilitation Program.'],
 ];
 
-const SAFETY_NOTE = 'I understand that for safety reasons, I am not to begin exercising without staff supervision. I will phone The Heart Specialists Clinic and Diagnostic Center Concierge and/or the Cardiac Rehabilitation Staff to notify of absence. (* We have patients waiting to enter the class and have to abide by attention to attendance.) The staff understands that due to other medical concerns or issues, it may be necessary for me to be absent.';
+export const SAFETY_NOTE = 'I understand that for safety reasons, I am not to begin exercising without staff supervision. I will phone The Heart Specialists Clinic and Diagnostic Center Concierge and/or the Cardiac Rehabilitation Staff to notify of absence. (* We have patients waiting to enter the class and have to abide by attention to attendance.) The staff understands that due to other medical concerns or issues, it may be necessary for me to be absent.';
 
-const INDICATIONS = ['Post Coronary Artery Bypass and Grafting', 'Post Acute Coronary Syndrome', 'Heart Failure', 'Post Percutaneous Coronary Intervention', 'Chronic Stable Angina', 'Post Valvular Heart Surgery'];
-const COMORBIDITIES = ['Hypertension', 'Diabetes', 'Dyslipidemia', 'Chronic Kidney disease', 'COPD/ASTHMA', 'Cerebrovascular disease', 'Peripheral Artery disease'];
-const GAD2 = ['Feeling nervous, anxious or on edge', 'Not being able to stop or control worrying'];
-const PHQ2 = ['Little interest or pleasure in doing things', 'Feeling down, depressed or hopeless'];
+export const INDICATIONS = ['Post Coronary Artery Bypass and Grafting', 'Post Acute Coronary Syndrome', 'Heart Failure', 'Post Percutaneous Coronary Intervention', 'Chronic Stable Angina', 'Post Valvular Heart Surgery'];
+export const COMORBIDITIES = ['Hypertension', 'Diabetes', 'Dyslipidemia', 'Chronic Kidney disease', 'COPD/ASTHMA', 'Cerebrovascular disease', 'Peripheral Artery disease'];
+export const GAD2 = ['Feeling nervous, anxious or on edge', 'Not being able to stop or control worrying'];
+export const PHQ2 = ['Little interest or pleasure in doing things', 'Feeling down, depressed or hopeless'];
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const SESSIONS = 12;
