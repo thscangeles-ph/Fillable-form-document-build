@@ -1,28 +1,62 @@
 # Builds the Windows installer and the Android app.
-# Push a tag like v1.0.0 to publish both on the Releases page; or run it by hand from the Actions tab.
+#
+# To publish: Actions tab → "Build installers" → Run workflow → type a version (e.g. 1.0.0)
+# → Run workflow. GitHub creates the v1.0.0 tag and release and attaches the installers.
+# Leave the version empty for a test build (installers are kept on the run page only).
+# Pushing a tag like v1.0.0 publishes the same way.
 name: Build installers
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.0.0 (leave empty for a test build that publishes nothing)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      publish: ${{ steps.v.outputs.publish }}
+    steps:
+      - id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"; PUBLISH=true
+          elif [ -n "$INPUT_VERSION" ]; then
+            VERSION="${INPUT_VERSION#v}"; VERSION="${VERSION// /}"; PUBLISH=true
+          else
+            VERSION="0.0.0-test.${GITHUB_RUN_NUMBER}"; PUBLISH=false
+          fi
+          if [ "$PUBLISH" = true ] && ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like 1.0.0 (got \"$VERSION\")."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "Version $VERSION, publish: $PUBLISH"
+
   windows:
+    needs: version
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Use the tag as the app version
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Set the app version
         shell: bash
         working-directory: desktop
-        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+        run: npm version --no-git-tag-version --allow-same-version "${{ needs.version.outputs.version }}"
       - run: npm ci
         working-directory: desktop
       - run: npm run dist
@@ -34,6 +68,7 @@ jobs:
           if-no-files-found: error
 
   android:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,9 +84,14 @@ jobs:
       - name: Load the signing key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "::error::Add the ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD secrets (Settings > Secrets and variables > Actions). See README > Installers."
+          # Report which secret is missing (never its value).
+          missing=""
+          [ -z "$ANDROID_KEYSTORE_BASE64" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "$ANDROID_KEYSTORE_PASSWORD" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Repository secret(s) not available to this build:$missing. Add them under Settings > Secrets and variables > Actions > Repository secrets."
             exit 1
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
@@ -60,8 +100,8 @@ jobs:
         env:
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="0.0.0-test.${GITHUB_RUN_NUMBER}"; fi
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon -PversionCode="${GITHUB_RUN_NUMBER}" -PversionName="$VERSION"
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/THSC-Cardiac-Rehab-${VERSION}.apk"
@@ -73,8 +113,8 @@ jobs:
 
   release:
     # Publishes whatever built, so a missing Android key doesn't hold back the Windows installer.
-    if: always() && startsWith(github.ref, 'refs/tags/v') && (needs.windows.result == 'success' || needs.android.result == 'success')
-    needs: [windows, android]
+    if: always() && needs.version.outputs.publish == 'true' && (needs.windows.result == 'success' || needs.android.result == 'success')
+    needs: [version, windows, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -83,10 +123,16 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          # Creates the tag on this commit when the run was started from the Actions tab.
+          tag_name: v${{ needs.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: THSC Cardiac Rehab Forms ${{ needs.version.outputs.version }}
+          draft: false
+          make_latest: true
           files: out/*
           body: |
             **Windows PC:** download `THSC-Cardiac-Rehab-Setup-….exe` and run it. If Windows shows "Windows protected your PC", click **More info → Run anyway** (the installer is not code-signed).
 
             **Android tablet or phone:** download `THSC-Cardiac-Rehab-….apk` on the device, open it, and allow "Install unknown apps" for your browser or Files app when asked.
 
-            Patient records in the installed apps are separate from the website version. To move them, use **Export backup** (or **Share backup**) in the old one and **Import backup** in the new one.
+            Patient records in the installed apps are separate from the website version. To move them, use **Export backup** in the old one and **Import backup** in the new one.
