@@ -3,7 +3,7 @@ import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
 import { initInstall, installButton } from './install.js';
 import { isAndroidApp, saveFileAndroid, shareFileAndroid } from './native.js';
-import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel } from './forms.js';
+import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel, heartShieldDone } from './forms.js';
 import { renderDashboard, toCsv } from './dashboard.js';
 
 const main = document.getElementById('main');
@@ -292,6 +292,7 @@ function tabBadge(id, f, p) {
   if (id === 'dasi') done = dasiScore(f).answered === 12;
   if (id === 'walk') done = !!f.smwt_total;
   if (id === 'plan') done = !!(f.itp_cardiologist && f.gad2_total && f.phq2_total);
+  if (id === 'heartshield') done = heartShieldDone(f);
   if (id === 'sessions') return h('span.badge', `${sessionsDone(f)}/${SESSIONS}`);
   return done ? h('span.badge.ok', { 'aria-label': 'complete' }, '✓') : null;
 }

@@ -145,6 +145,36 @@ try {
   await page.waitForSelector('#f_s01_weight');
   expect(await page.inputValue('#f_s01_weight') === '72', 'session data persisted after reload');
 
+  // HEART-SHIELD: answers are saved with the patient and come back after leaving the tab and reloading.
+  const hs = page.frameLocator('iframe.panel-frame');
+  const hsOutcome = () => hs.locator('#result h3').textContent();
+  await page.getByRole('tab', { name: /^HEART-SHIELD/ }).click();
+  await hs.locator('#result').waitFor();
+  const hsAnswers = { hf: 'yes', stable: 'yes', history: 'yes', flu: 'yes', pneumo: 'no', risk: 'yes', allergy: 'no', illness: 'no', other: 'no' };
+  for (const [k, v] of Object.entries(hsAnswers)) await hs.locator(`input[name=${k}][value=${v}] + span`).click();
+  await hs.locator('#phenotype').fill('HFrEF');
+  const hsResult = await hsOutcome();
+  expect(hsResult.startsWith('Potentially eligible'), `HEART-SHIELD outcome: ${hsResult}`);
+  await page.waitForTimeout(600);
+  await page.getByRole('tab', { name: /^DASI/ }).click();
+  await page.getByRole('tab', { name: /^HEART-SHIELD/ }).click();
+  await hs.locator('#result').waitFor();
+  await page.waitForTimeout(300);
+  expect((await hsOutcome()) === hsResult, 'HEART-SHIELD outcome restored after switching tabs');
+  expect(await hs.locator('input[name=pneumo][value=no]').isChecked(), 'HEART-SHIELD answer restored');
+  expect((await hs.locator('#phenotype').inputValue()) === 'HFrEF', 'HEART-SHIELD notes restored');
+  expect(await page.locator('.tab-link[aria-selected="true"] .badge.ok').count() === 1, 'HEART-SHIELD tab shows done');
+  await page.reload();
+  await hs.locator('#result').waitFor();
+  await page.waitForTimeout(300);
+  expect((await hsOutcome()) === hsResult, 'HEART-SHIELD outcome restored after reload');
+  await hs.getByRole('button', { name: 'Clear form' }).click();
+  await page.waitForTimeout(600);
+  const cleared = await page.evaluate(async () => (await (await import('/js/store.js')).listPatients()).find((p) => p.fields.pt_name === 'JOVEN SAMILLANO').fields.heart_shield);
+  expect(cleared === undefined, `Clear form removes saved answers: ${JSON.stringify(cleared)}`);
+  await page.getByRole('tab', { name: /^Exercise Sessions/ }).click();
+  await page.getByRole('tab', { name: /^Session 1\b/ }).click();
+
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download Word' }).click()]);
   const file = path.join(out, dl.suggestedFilename());
   await dl.saveAs(file);
