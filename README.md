@@ -63,7 +63,7 @@ iPad and iPhone can't take an installer outside the App Store, so on Apple devic
 Safari → **Add to Home Screen**.
 
 **Records are per app.** The Windows app, the Android app and the website each keep their own
-records. Move them with Export/Share backup → Import backup.
+records. Move them with Export backup → Import backup.
 
 ### Building a release
 
@@ -96,9 +96,9 @@ Any static host works the same way (Vercel, Netlify, GitHub Pages, a clinic intr
 
 Each device keeps its own records. To copy them to another tablet or phone:
 
-1. On the device with the records, tap **Share backup** on the Patients screen and pick
-   **Bluetooth**, Quick Share, AirDrop or email. (Where sharing is not available, use
-   **Export backup** and send the downloaded file yourself.)
+1. On the device with the records, tap **Export backup** on the Patients screen, then send
+   the downloaded file to the other device (Bluetooth, Quick Share, AirDrop, USB cable or email)
+   from the Files / Downloads app.
 2. On the receiving device, open the app and tap **Import backup**, then choose the file
    (on Android, Bluetooth files land in *Downloads* or *Downloads › Bluetooth*).
 
@@ -106,8 +106,8 @@ Importing merges: new patients are added, and for a patient on both devices the 
 recently edited copy wins. A finalized signature is never replaced or removed.
 
 A web app cannot open a Bluetooth link to another phone by itself (browsers only let
-web pages talk to Bluetooth accessories, and Safari not at all), so the transfer goes
-through the device's own share menu.
+web pages talk to Bluetooth accessories, and Safari not at all), so the file is sent with
+the device's own tools.
 
 ## Where the data lives
 
