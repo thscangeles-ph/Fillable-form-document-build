@@ -8,7 +8,7 @@ const dest = path.resolve(process.argv[2] || '');
 if (!process.argv[2]) throw new Error('Usage: node scripts/copy-web.mjs <dest>');
 
 // sw.js is left out: the installed apps carry their own files.
-const ENTRIES = ['index.html', 'manifest.webmanifest', 'css', 'js', 'assets', 'template', 'vendor'];
+const ENTRIES = ['index.html', 'manifest.webmanifest', 'css', 'js', 'assets', 'template', 'vendor', 'panels'];
 rmSync(dest, { recursive: true, force: true });
 mkdirSync(dest, { recursive: true });
 for (const e of ENTRIES) cpSync(path.join(root, e), path.join(dest, e), { recursive: true });

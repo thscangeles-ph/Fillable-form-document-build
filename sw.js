@@ -1,7 +1,7 @@
 // Offline support for the installed app.
 // Network first (so updates arrive as soon as the tablet is online), cache as fallback.
 // Bump VERSION when APP_FILES changes; file contents refresh on their own.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const APP_CACHE = `app-${VERSION}`;
 const APP_FILES = [
   './',
@@ -26,6 +26,7 @@ const APP_FILES = [
   'js/template.js',
   'vendor/jszip.min.js',
   'template/THSC_Cardiac_Rehab_Forms_BLANK.dotx',
+  'panels/heart-shield.html',
   'assets/logo.png',
   'assets/icon-192.png',
   'assets/icon-512.png',

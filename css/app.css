@@ -255,6 +255,9 @@ input.num { -moz-appearance: textfield; }
 .vit .label { font-size: 13px; }
 .vit .input { min-height: 44px; font-size: 16px; padding: 8px 10px; }
 
+/* embedded panels */
+.panel-frame { display: block; width: 100%; min-height: 600px; border: 0; border-radius: var(--radius); background: #f2f6f5; }
+
 /* signature lock */
 .sig-status.is-final { color: var(--gold); }
 .sig-box.locked { border-color: var(--gold-deep); }

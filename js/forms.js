@@ -59,6 +59,7 @@ export const TABS = [
   { id: 'walk', label: '6 Minute Walk', render: walkTab },
   { id: 'plan', label: 'Treatment Plan', render: planTab },
   { id: 'sessions', label: 'Exercise Sessions', render: sessionsTab },
+  { id: 'heartshield', label: 'HEART-SHIELD', render: heartShieldTab },
 ];
 
 // ---------- derived values (the template's CALCULATE / save macros) ----------
@@ -370,6 +371,22 @@ function partialLapField(ctx) {
     if (current && !options.includes(current)) ctx.set('smwt_partial', '');
   });
   return h('label.field', { for: select.id }, h('span.label', 'Final partial lap'), select);
+}
+
+// The clinic's HEART-SHIELD checklist, shown as-is from panels/heart-shield.html.
+// It keeps its own answers in the page, so nothing is saved with the patient.
+function heartShieldTab() {
+  const frame = h('iframe.panel-frame', { src: 'panels/heart-shield.html', title: 'HEART-SHIELD heart failure vaccination eligibility checklist' });
+  frame.addEventListener('load', () => {
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    const fit = () => { frame.style.height = `${doc.documentElement.scrollHeight}px`; };
+    fit();
+    new ResizeObserver(fit).observe(doc.body);
+  });
+  return h('div.tab',
+    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are not saved with the patient: use Print / Save as PDF or Copy assessment to keep a record.'),
+    frame);
 }
 
 function screenCard(ctx, title, prefix, questions) {
