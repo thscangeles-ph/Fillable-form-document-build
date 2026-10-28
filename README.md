@@ -132,7 +132,8 @@ input in the app is keyed by the tag of a content control in that template
 4. embeds the signatures as images on their signature lines,
 5. removes the template's SAVE PATIENT FILE / CALCULATE macro buttons — a `.dotx`
    cannot contain macros, and the app now does those calculations itself,
-6. saves the result as a normal `.docx` named `PATIENT NAME - MM-DD-YYYY.docx`.
+6. adds a "Patient: NAME   Age   Enrolled" line under the clinic header, so every page shows whose record it is,
+7. saves the result as a normal `.docx` named `PATIENT NAME - MM-DD-YYYY.docx`.
 
 To change the paper form, edit the template in Word and keep the content-control
 tags the same; the app picks up changed dropdown options automatically.

@@ -210,6 +210,8 @@ try {
     expect(got === want, `${tag}: expected "${want}", got "${got}"`);
   }
   expect(!xml.includes('MACROBUTTON'), 'macro buttons removed');
+  const header = await zip.file('word/header1.xml').async('string');
+  expect(header.includes('JOVEN SAMILLANO') && header.includes('10/27/2026'.slice(0, 3)) && header.includes('Enrolled: '), 'patient line in the page header');
   for (const text of ['Heart Failure Vaccination Eligibility Checklist', 'A. Heart failure &amp; clinical readiness', 'Established diagnosis of heart failure?',
     'Potentially eligible — verify vaccine-specific schedule', 'HFrEF', 'Dr. A. Reyes', 'Answer']) {
     expect(xml.includes(text), `HEART-SHIELD page contains "${text}"`);

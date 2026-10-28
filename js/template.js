@@ -95,6 +95,7 @@ export async function buildDocx(values, signatures = {}, pages = []) {
 
   zip.file('word/document.xml', new XMLSerializer().serializeToString(doc));
   await fillBoundData(zip, values);
+  await addHeaderPatientLine(zip, values);
   // A filled copy is a document, not a template.
   const ctPath = '[Content_Types].xml';
   const ct = await zip.file(ctPath).async('string');
@@ -151,6 +152,36 @@ async function fillBoundData(zip, values) {
     if (el && v) el.textContent = schema[tag]?.kind === 'date' ? isoToUs(v) : String(v);
   }
   zip.file(path, new XMLSerializer().serializeToString(xml));
+}
+
+// Puts "Patient: NAME   Age: 45   Enrolled: 10/27/2026" under the clinic header, so every
+// page (continuation pages included) shows whose record it is.
+async function addHeaderPatientLine(zip, values) {
+  if (!values.pt_name) return;
+  const parts = [
+    ['Patient', values.pt_name],
+    ['Age', values.pt_age],
+    ['Enrolled', isoToUs(values.pt_date)],
+  ].filter(([, v]) => v);
+  for (const path of Object.keys(zip.files).filter((f) => /^word\/header\d*\.xml$/.test(f))) {
+    const hdr = parseXml(await zip.file(path).async('string'));
+    const anchor = [...hdr.getElementsByTagNameNS(W, 't')].find((t) => t.textContent.includes('CARDIAC REHABILITATION PROGRAM'));
+    if (!anchor) continue;
+    const runs = [];
+    parts.forEach(([label, value], i) => {
+      if (i) runs.push(run(hdr, '      ', { sz: 17 }));
+      runs.push(run(hdr, `${label}: `, { b: true, sz: 17 }), run(hdr, String(value), { sz: 17 }));
+    });
+    const line = el(hdr, 'p', {},
+      el(hdr, 'pPr', {},
+        el(hdr, 'pBdr', {}, el(hdr, 'bottom', { val: 'single', sz: 4, space: 2, color: 'BFBFBF' })),
+        el(hdr, 'spacing', { before: 40, after: 0 }),
+        el(hdr, 'jc', { val: 'center' })),
+      runs);
+    const p = ancestor(anchor, W, 'p');
+    p.parentNode.insertBefore(line, p.nextSibling);
+    zip.file(path, new XMLSerializer().serializeToString(hdr));
+  }
 }
 
 // The 6 Minute Walk page prints "(x 10 meters)" after the lap count.
