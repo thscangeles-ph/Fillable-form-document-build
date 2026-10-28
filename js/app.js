@@ -2,7 +2,7 @@ import { h, todayIso } from './dom.js';
 import { loadTemplate, buildDocx, isoToUs } from './template.js';
 import { listPatients, getPatient, savePatient, deletePatient, newPatient, importPatients } from './store.js';
 import { initInstall, installButton } from './install.js';
-import { isAndroidApp, saveFileAndroid, shareFileAndroid } from './native.js';
+import { isAndroidApp, saveFileAndroid } from './native.js';
 import { TABS, field, derive, ageFrom, sessionsDone, dasiScore, SESSIONS, statusField, dropoutFields, programStatus, statusLabel, heartShieldDone, heartShieldPage } from './forms.js';
 import { renderDashboard, toCsv } from './dashboard.js';
 import { buildPdf } from './pdf.js';
@@ -103,14 +103,13 @@ async function showList() {
       h('h1.page-title', 'Patients'),
       h('div.actions',
         installButton(),
-        canShareFiles() ? h('button.btn.btn-ghost', { type: 'button', onclick: shareBackup }, 'Share backup') : null,
         h('button.btn.btn-ghost', { type: 'button', onclick: exportAll }, 'Export backup'),
         h('button.btn.btn-ghost', { type: 'button', onclick: () => importInput.click() }, 'Import backup'),
         importInput,
         h('button.btn.btn-primary', { type: 'button', onclick: createPatient }, '+ New patient'))),
     search,
     list,
-    h('p.fine.center', 'Patient records are stored in this browser on this device. Use Share backup or Export backup to copy them to another device, then Import backup there.'),
+    h('p.fine.center', 'Patient records are stored in this browser on this device. Use Export backup to copy them to another device, then Import backup there.'),
   ));
   search.focus();
 }
@@ -127,29 +126,6 @@ async function backupJson() {
 
 async function exportAll() {
   download(new Blob([await backupJson()], { type: 'application/json' }), `THSC Cardiac Rehab backup ${todayIso()}.json`);
-}
-
-// Phone/tablet share sheet (Bluetooth, Quick Share, AirDrop, email…). Browsers only
-// allow sharing a short list of file types, so the backup goes out as a .txt file.
-const shareFile = (text) => new File([text], `THSC Cardiac Rehab backup ${todayIso()}.txt`, { type: 'text/plain' });
-
-function canShareFiles() {
-  if (isAndroidApp()) return true;
-  try {
-    return !!navigator.canShare?.({ files: [shareFile('{}')] });
-  } catch {
-    return false;
-  }
-}
-
-async function shareBackup() {
-  try {
-    const file = shareFile(await backupJson());
-    if (isAndroidApp()) await shareFileAndroid(file, file.name, 'THSC Cardiac Rehab backup');
-    else await navigator.share({ files: [file], title: 'THSC Cardiac Rehab backup' });
-  } catch (err) {
-    if (err.name !== 'AbortError') toast(`Could not share: ${err.message}`, true);
-  }
 }
 
 async function onImport(e) {
