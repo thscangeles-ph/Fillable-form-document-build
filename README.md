@@ -67,11 +67,12 @@ records. Move them with Export backup → Import backup.
 
 ### Building a release
 
-Push a version tag; GitHub Actions builds both installers and publishes them:
+On GitHub: **Actions** tab → **Build installers** → **Run workflow** → type the version
+(e.g. `1.0.1`) → **Run workflow**. GitHub builds both installers, creates the `v1.0.1` tag and
+release, and attaches the files (about 5–10 minutes). Leave the version empty for a test build
+that publishes nothing; its installers are kept on the run's page under *Artifacts*.
 
-```bash
-git tag v1.0.1 && git push origin v1.0.1
-```
+Pushing a version tag (`git tag v1.0.1 && git push origin v1.0.1`) publishes the same way.
 
 The Android build needs two repository secrets (Settings → Secrets and variables → Actions):
 `ANDROID_KEYSTORE_BASE64` (the release keystore, base64) and `ANDROID_KEYSTORE_PASSWORD`.
@@ -166,7 +167,7 @@ css/fonts.css         bundled Fraunces and Lexend fonts (assets/fonts, SIL OFL)
 desktop/              Windows app (Electron) and installer settings
 mobile/               Android app (Capacitor); android/ is the Gradle project
 scripts/copy-web.mjs  copies the web app into desktop/app and mobile/www
-.github/workflows/    builds the installers on version tags
+.github/workflows/    builds the installers; publishes a release from Run workflow or a version tag
 sw.js                 offline cache (bump VERSION when its file list changes)
 manifest.webmanifest  app name, icons, full-screen display
 template/             the Word template
