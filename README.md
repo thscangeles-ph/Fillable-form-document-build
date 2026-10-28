@@ -14,7 +14,7 @@ Forms (one tab each):
 | 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × lap length (10 m or 20 m) + partial lap |
 | Treatment Plan | Indications, co-morbidities, exam (BMI calculated), GAD-2 and PHQ-2 totals |
 | Exercise Sessions | Sessions 1–12: calisthenics, treadmill, bicycle vitals, Borg scale, symptoms, discharge vitals |
-| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown unchanged). Its answers and outcome are saved with the patient and filled back in when the tab is opened; they are not part of the Word file (use its Print / Save as PDF) |
+| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown unchanged). Its answers and outcome are saved with the patient, filled back in when the tab is opened, and printed as the last page of the Word file once it has been started |
 
 Patient name, age, sex, birthday and enrollment date are entered once and appear on every form.
 
