@@ -10,9 +10,9 @@ const num = (v) => {
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const sexOf = (f) => (f.pt_sex === 'Male' || f.pt_sex === 'Female' ? f.pt_sex : null);
 
-// 6MWD at enrollment: the Treatment Plan figure, else the 6 Minute Walk test result.
+// 6MWD at enrollment / end of program: the Treatment Plan figure, else that 6 Minute Walk test's result.
 export const walkInitial = (f) => num(f.itp_6mwt_initial) ?? num(f.smwt_total);
-export const walkEnd = (f) => num(f.itp_6mwt_end);
+export const walkEnd = (f) => num(f.itp_6mwt_end) ?? num(f.smwte_total);
 
 export function summarize(patients) {
   const rows = patients.map((p) => ({ p, f: p.fields, status: programStatus(p.fields) }));

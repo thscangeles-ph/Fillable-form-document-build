@@ -87,7 +87,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .card-title { margin: 0 0 14px; font-size: 17px; font-weight: 700; }
 .grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 14px; align-items: end; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-.card > * + .grid, .card > .grid + *, .card > .field + .field, .card > .field + .grid, .card > .checks + .grid { margin-top: 14px; }
+.card > * + .grid, .card > .grid + *, .card > .field + .field, .card > .field + .grid, .card > .checks + .grid, .card > .checks + .field { margin-top: 14px; }
 
 /* ---------- fields ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -316,6 +316,11 @@ input.num { -moz-appearance: textfield; }
 .toast.out { opacity: 0; }
 
 /* ---------- responsive ---------- */
+/* Seven tabs: tighten them so they still fit in one row on smaller laptop screens. */
+@media (max-width: 1400px) {
+  .tab-link { padding: 12px 13px; font-size: 15px; gap: 6px; }
+  .tabs { gap: 6px; }
+}
 @media (max-width: 1100px) {
   .patient-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .patient-fields .grow { grid-column: 1 / -1; }

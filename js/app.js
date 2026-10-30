@@ -269,6 +269,7 @@ function tabBadge(id, f, p) {
   if (id === 'consent') done = !!(p.signatures.participant && p.signatures.witness);
   if (id === 'dasi') done = dasiScore(f).answered === 12;
   if (id === 'walk') done = !!f.smwt_total;
+  if (id === 'walkend') done = !!f.smwte_total;
   if (id === 'plan') done = !!(f.itp_cardiologist && f.gad2_total && f.phq2_total);
   if (id === 'heartshield') done = heartShieldDone(f);
   if (id === 'sessions') return h('span.badge', `${sessionsDone(f)}/${SESSIONS}`);

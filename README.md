@@ -13,8 +13,9 @@ Forms (one tab each):
 | DASI | 12 Yes/No questions; total, estimated peak VO2 and METs are calculated |
 | 6 Minute Walk | Baseline / end-of-test vitals; total distance = laps × lap length (10 m or 20 m) + partial lap |
 | Treatment Plan | Indications, co-morbidities, exam (BMI calculated), GAD-2 and PHQ-2 totals |
-| Exercise Sessions | Sessions 1–12: calisthenics, treadmill, bicycle vitals, Borg scale, symptoms, discharge vitals |
-| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown unchanged). Its answers and outcome are saved with the patient, filled back in when the tab is opened, and printed as the last page of the Word file once it has been started |
+| Exercise Sessions | Sessions 1–12: calisthenics (weights in lbs), treadmill, bicycle vitals, Borg scale, symptoms or "No signs and symptoms", Nurse's Note, discharge vitals |
+| HEART-SHIELD | Heart failure vaccination eligibility checklist (`panels/heart-shield.html`, shown unchanged). Its answers and outcome are saved with the patient, filled back in when the tab is opened, and printed after the Exercise Sessions in the Word file once it has been started |
+| 6 Minute Walk (End) | The 6 Minute Walk repeated at the end of the program, with its own test date, lap length and total; *Use end 6MWT result* copies the distance to the Treatment Plan. Printed as the last page |
 
 Patient name, age, sex, birthday and enrollment date are entered once and appear on every form.
 
@@ -30,7 +31,8 @@ date range: total enrolled (male / female), average age (male / female), complet
 dropped out (with a count per dropout reason), hypertension (ticked under Co-morbidities
 in the Treatment Plan, with male / female), and average 6MWD at enrollment and end of program. *Export CSV* saves the
 patient table for Excel. 6MWD at enrollment uses the Treatment Plan's *Initial* value,
-or the 6 Minute Walk result when that is blank.
+or the 6 Minute Walk result when that is blank; 6MWD at the end uses *End of program*, or the
+6 Minute Walk (End) result.
 
 ## Installing on a tablet
 
@@ -149,13 +151,19 @@ input in the app is keyed by the tag of a content control in that template
 To change the paper form, edit the template in Word and keep the content-control
 tags the same; the app picks up changed dropdown options automatically.
 
+Additions to the clinic's original template: the calisthenics *Weights* list is in lbs
+(None, 1–10 lbs), each session has a *No signs and symptoms* checkbox (`sNN_sym_none`) and a
+*Nurse's Note* row (`sNN_nurse_note`), and a second 6 Minute Walk page, *End of Program*, closes
+the document (`smwte_*` tags, test date `smwte_date`). Values saved before the weights switched
+to lbs (e.g. "1.0 kg") are kept and printed as they were.
+
 ## Files
 
 ```
 index.html            app shell
 css/app.css           styles
 js/app.js             routing, patient list, patient page, save / download / delete
-js/forms.js           the five tabs, the calculations and program status
+js/forms.js           the form tabs, the calculations and program status
 js/dashboard.js       dashboard figures, patient table and CSV export
 js/template.js        reads and fills the Word template
 js/pdf.js             builds the PDF version of the forms (pdfmake)

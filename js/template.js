@@ -6,6 +6,7 @@ const W14 = 'http://schemas.microsoft.com/office/word/2010/wordml';
 const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const REL_IMAGE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
 const TEMPLATE_URL = 'template/THSC_Cardiac_Rehab_Forms_BLANK.dotx';
+const END_WALK_TITLE = '6 Minute Walk Test Results — End of Program';
 
 let templateBytes = null;
 let schema = null;
@@ -45,7 +46,10 @@ export function matchOption(options, value) {
   if (exact) return exact;
   const n = parseFloat(value);
   if (Number.isNaN(n)) return null;
-  return options.find((o) => parseFloat(o) === n) ?? null;
+  // "2.0 kg" must not turn into "2 lbs": a typed unit has to match the option's.
+  const unit = (s) => String(s).replace(/^[\s\d.,-]+/, '').trim().toLowerCase();
+  const u = unit(value);
+  return options.find((o) => parseFloat(o) === n && (!u || unit(o) === u)) ?? null;
 }
 
 export function isoToUs(iso) {
@@ -88,10 +92,12 @@ export async function buildDocx(values, signatures = {}, pages = []) {
     setText(sdt, pr, display, info.multiline);
   }
 
-  setLapLength(doc, Number(values.smwt_lap_length) === 20 ? 20 : 10);
+  for (const p of ['smwt', 'smwte']) setLapLength(doc, `${p}_laps`, Number(values[`${p}_lap_length`]) === 20 ? 20 : 10);
   removeMacroLeftovers(doc);
   await placeSignatures(zip, doc, signatures);
-  for (const page of pages) appendPage(doc, page);
+  // Extra pages go before the end-of-program 6 Minute Walk, which stays the last form.
+  const lastForm = findParagraph(doc, END_WALK_TITLE);
+  for (const page of pages) appendPage(doc, page, lastForm);
 
   zip.file('word/document.xml', new XMLSerializer().serializeToString(doc));
   await fillBoundData(zip, values);
@@ -184,10 +190,13 @@ async function addHeaderPatientLine(zip, values) {
   }
 }
 
-// The 6 Minute Walk page prints "(x 10 meters)" after the lap count.
-function setLapLength(doc, meters) {
+// Each 6 Minute Walk page prints "(x 10 meters)" after its lap count.
+function setLapLength(doc, lapsTag, meters) {
   if (meters === 10) return;
-  for (const t of doc.getElementsByTagNameNS(W, 't')) {
+  const sdt = controls(doc).find((c) => attr(child(child(c, W, 'sdtPr'), W, 'tag'), 'val') === lapsTag);
+  const p = sdt && ancestor(sdt, W, 'p');
+  if (!p) return;
+  for (const t of p.getElementsByTagNameNS(W, 't')) {
     if (t.textContent.includes('(x 10 meters)')) t.textContent = t.textContent.replace('(x 10 meters)', `(x ${meters} meters)`);
   }
 }
@@ -216,16 +225,16 @@ function removeMacroLeftovers(doc) {
 // ---------- extra pages ----------
 
 // Builds a page in the template's style (centered bold title, black-ruled tables with a
-// beige header row) after the last form. page: { title, subtitle, info: [[[label, value], …], …],
+// beige header row) before the end-of-program 6 Minute Walk. page: { title, subtitle, info: [[[label, value], …], …],
 // groups: [{ heading, rows: [[question, answer], …] }], outcome: { title, detail }, note }
 const PAGE_WIDTH = 10386;
 const HEADER_FILL = 'F3E7C6';
 const GOLD = 'C9971C';
 
-function appendPage(doc, page) {
+function appendPage(doc, page, before = null) {
   const body = doc.getElementsByTagNameNS(W, 'body')[0];
-  const sectPr = [...body.children].find((c) => c.localName === 'sectPr');
-  const add = (node) => body.insertBefore(node, sectPr);
+  const ref = before || [...body.children].find((c) => c.localName === 'sectPr');
+  const add = (node) => body.insertBefore(node, ref);
   const P = (runs, opts) => para(doc, runs, opts);
   const R = (text, opts) => run(doc, text, opts);
 

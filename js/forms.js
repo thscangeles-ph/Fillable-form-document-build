@@ -1,4 +1,4 @@
-// The five tabs. Every input is keyed by the Word template's content-control tag.
+// The form tabs. Every input is keyed by the Word template's content-control tag.
 import { h, todayIso } from './dom.js';
 import { matchOption, isoToUs } from './template.js';
 import { signaturePad } from './signature.js';
@@ -60,7 +60,12 @@ export const TABS = [
   { id: 'plan', label: 'Treatment Plan', render: planTab },
   { id: 'sessions', label: 'Exercise Sessions', render: sessionsTab },
   { id: 'heartshield', label: 'HEART-SHIELD', render: heartShieldTab },
+  { id: 'walkend', label: '6 Minute Walk (End)', render: walkEndTab },
 ];
+
+// The 6 Minute Walk is done at enrollment (smwt_*) and again at the end of the program (smwte_*).
+export const WALK_INITIAL = 'smwt';
+export const WALK_END = 'smwte';
 
 // ---------- derived values (the template's CALCULATE / save macros) ----------
 
@@ -96,12 +101,12 @@ function bmi(f) {
 
 // Lap length of the walking course; records from before the choice existed are 10 m.
 export const LAP_LENGTHS = [10, 20];
-export const lapLength = (f) => (Number(f.smwt_lap_length) === 20 ? 20 : 10);
+export const lapLength = (f, p = WALK_INITIAL) => (Number(f[`${p}_lap_length`]) === 20 ? 20 : 10);
 
-function walkTotal(f) {
-  const laps = parseFloat(f.smwt_laps);
+function walkTotal(f, p) {
+  const laps = parseFloat(f[`${p}_laps`]);
   if (Number.isNaN(laps)) return null;
-  return laps * lapLength(f) + (parseFloat(f.smwt_partial) || 0);
+  return laps * lapLength(f, p) + (parseFloat(f[`${p}_partial`]) || 0);
 }
 
 // Values the template expects to be calculated; empty string clears a stale result.
@@ -116,8 +121,10 @@ export function derive(f) {
   } else {
     out.dasi_total = out.dasi_vo2 = out.dasi_mets = '';
   }
-  const w = walkTotal(f);
-  out.smwt_total = w === null ? '' : String(w);
+  for (const p of [WALK_INITIAL, WALK_END]) {
+    const w = walkTotal(f, p);
+    out[`${p}_total`] = w === null ? '' : String(w);
+  }
   const g = screenTotal(f, 'gad2');
   out.gad2_total = g === null ? '' : String(g);
   const p = screenTotal(f, 'phq2');
@@ -156,7 +163,9 @@ export function field(ctx, tag, label, opt = {}) {
     input = h('select.input',
       { onchange: (e) => ctx.set(tag, e.target.value) },
       h('option', { value: '' }, '—'),
-      info.options.map((o) => h('option', { value: o, selected: o === val }, o)));
+      info.options.map((o) => h('option', { value: o, selected: o === val }, o)),
+      // A value from an older list (e.g. weights in kg) stays shown until it is changed.
+      val && !info.options.includes(val) ? h('option', { value: val, selected: true }, val) : null);
   } else if (info.kind === 'dropdown') {
     const nums = info.options.map(parseFloat).filter((n) => !Number.isNaN(n));
     const step = nums.some((n) => !Number.isInteger(n)) ? '0.1' : '1';
@@ -319,56 +328,72 @@ function dasiTab(ctx) {
 }
 
 function walkTab(ctx) {
+  return walkForm(ctx, WALK_INITIAL,
+    intro('6 Minute Walk Test Results', 'Record baseline vitals, run the test, then record end-of-test vitals and the distance walked.'));
+}
+
+function walkEndTab(ctx) {
+  const today = h('button.btn.btn-ghost.btn-sm', {
+    type: 'button',
+    onclick: () => { const v = todayIso(); document.getElementById(`f_${WALK_END}_date`).value = v; ctx.set(`${WALK_END}_date`, v); },
+  }, 'Today');
+  return walkForm(ctx, WALK_END,
+    intro('6 Minute Walk Test Results — End of Program', 'The same test repeated at the end of the program. Its distance can be copied to "End of program" in the Treatment Plan.'),
+    card(null, grid(3, h('div.date-today', field(ctx, `${WALK_END}_date`, 'Test date'), today))));
+}
+
+function walkForm(ctx, p, ...top) {
   const vitals = (phase, label) => h('div.vitals-col',
     h('h4', label),
-    bp(ctx, `smwt_bp_${phase}`, 'Blood pressure'),
-    field(ctx, `smwt_hr_${phase}`, 'Heart rate', { suffix: 'bpm' }),
-    field(ctx, `smwt_o2_${phase}`, 'O2 saturation'));
+    bp(ctx, `${p}_bp_${phase}`, 'Blood pressure'),
+    field(ctx, `${p}_hr_${phase}`, 'Heart rate', { suffix: 'bpm' }),
+    field(ctx, `${p}_o2_${phase}`, 'O2 saturation'));
 
   return h('div.tab',
-    intro('6 Minute Walk Test Results', 'Record baseline vitals, run the test, then record end-of-test vitals and the distance walked.'),
+    ...top,
     card('Patient measurements', grid(2,
-      field(ctx, 'smwt_height', 'Height', { placeholder: 'e.g. 1.70 m' }),
-      field(ctx, 'smwt_weight', 'Weight', { placeholder: 'e.g. 72 kg' }))),
+      field(ctx, `${p}_height`, 'Height', { placeholder: 'e.g. 1.70 m' }),
+      field(ctx, `${p}_weight`, 'Weight', { placeholder: 'e.g. 72 kg' }))),
     card('Vital signs', h('div.vitals', vitals('baseline', 'Baseline'), vitals('end', 'End of test'))),
     card('During the test',
       grid(2,
-        field(ctx, 'smwt_stopped', 'Stopped or paused before 6 minutes?'),
-        field(ctx, 'smwt_stop_reason', 'If yes, reason')),
-      field(ctx, 'smwt_symptoms', 'Other symptoms at end of test')),
+        field(ctx, `${p}_stopped`, 'Stopped or paused before 6 minutes?'),
+        field(ctx, `${p}_stop_reason`, 'If yes, reason')),
+      field(ctx, `${p}_symptoms`, 'Other symptoms at end of test')),
     card('Distance',
       grid(3,
-        lapsField(ctx),
-        partialLapField(ctx),
-        computed(ctx, 'Total distance in 6 minutes', () => [ctx.fields.smwt_total ? `${ctx.fields.smwt_total} m` : '', `laps × ${lapLength(ctx.fields)} + partial lap`], 'accent'))),
+        lapsField(ctx, p),
+        partialLapField(ctx, p),
+        computed(ctx, 'Total distance in 6 minutes', () => [ctx.fields[`${p}_total`] ? `${ctx.fields[`${p}_total`]} m` : '', `laps × ${lapLength(ctx.fields, p)} + partial lap`], 'accent'))),
   );
 }
 
 // Number of laps, with the course's lap length chosen beside it.
-function lapsField(ctx) {
+function lapsField(ctx, p) {
   const length = h('select.input.lap-length', {
-    id: 'f_smwt_lap_length',
+    id: `f_${p}_lap_length`,
     'aria-label': 'Lap length',
-    onchange: (e) => ctx.set('smwt_lap_length', e.target.value),
-  }, LAP_LENGTHS.map((n) => h('option', { value: String(n), selected: lapLength(ctx.fields) === n }, `× ${n} m`)));
+    onchange: (e) => ctx.set(`${p}_lap_length`, e.target.value),
+  }, LAP_LENGTHS.map((n) => h('option', { value: String(n), selected: lapLength(ctx.fields, p) === n }, `× ${n} m`)));
   return h('div.field',
-    h('label.label', { for: 'f_smwt_laps' }, 'Number of laps'),
-    h('div.with-suffix', field(ctx, 'smwt_laps', null), length));
+    h('label.label', { for: `f_${p}_laps` }, 'Number of laps'),
+    h('div.with-suffix', field(ctx, `${p}_laps`, null), length));
 }
 
 // The final partial lap can be anything shorter than one lap: 0–9 m or 0–19 m.
-function partialLapField(ctx) {
-  const select = h('select.input', { id: 'f_smwt_partial', onchange: (e) => ctx.set('smwt_partial', e.target.value) });
-  select.dataset.tag = 'smwt_partial';
+function partialLapField(ctx, p) {
+  const tag = `${p}_partial`;
+  const select = h('select.input', { id: `f_${tag}`, onchange: (e) => ctx.set(tag, e.target.value) });
+  select.dataset.tag = tag;
   let shownFor = null;
   ctx.watch(() => {
-    const n = lapLength(ctx.fields);
+    const n = lapLength(ctx.fields, p);
     if (n === shownFor) return;
     shownFor = n;
     const options = Array.from({ length: n }, (_, i) => `${i} m`);
-    const current = ctx.fields.smwt_partial || '';
+    const current = ctx.fields[tag] || '';
     select.replaceChildren(h('option', { value: '' }, '—'), ...options.map((o) => h('option', { value: o, selected: o === current }, o)));
-    if (current && !options.includes(current)) ctx.set('smwt_partial', '');
+    if (current && !options.includes(current)) ctx.set(tag, '');
   });
   return h('label.field', { for: select.id }, h('span.label', 'Final partial lap'), select);
 }
@@ -486,21 +511,28 @@ function screenCard(ctx, title, prefix, questions) {
     }));
 }
 
-function planTab(ctx) {
-  const sixMinute = h('button.btn.btn-ghost.btn-sm', {
+// "Use 6MWT result" button: copies a 6 Minute Walk total into a Treatment Plan field.
+function useWalkResult(ctx, p, target, name) {
+  const btn = h('button.btn.btn-ghost.btn-sm', {
     type: 'button',
     onclick: () => {
-      const v = ctx.fields.smwt_total;
+      const v = ctx.fields[`${p}_total`];
       if (!v) return;
-      document.getElementById('f_itp_6mwt_initial').value = v;
-      ctx.set('itp_6mwt_initial', v);
+      document.getElementById(`f_${target}`).value = v;
+      ctx.set(target, v);
     },
   });
   ctx.watch(() => {
-    const v = ctx.fields.smwt_total;
-    sixMinute.textContent = v ? `Use 6MWT result (${v} m)` : 'No 6MWT result yet';
-    sixMinute.disabled = !v;
+    const v = ctx.fields[`${p}_total`];
+    btn.textContent = v ? `Use ${name} result (${v} m)` : `No ${name} result yet`;
+    btn.disabled = !v;
   });
+  return btn;
+}
+
+function planTab(ctx) {
+  const sixMinute = useWalkResult(ctx, WALK_INITIAL, 'itp_6mwt_initial', '6MWT');
+  const sixMinuteEnd = useWalkResult(ctx, WALK_END, 'itp_6mwt_end', 'end 6MWT');
 
   return h('div.tab',
     intro('Individualized Treatment Plan', 'Clinical summary at enrollment, with anxiety and depression screening.'),
@@ -523,7 +555,7 @@ function planTab(ctx) {
         card('6 minute walk test distance',
           gridTop(2,
             h('div', field(ctx, 'itp_6mwt_initial', 'Initial', { suffix: 'meters', inputmode: 'numeric' }), sixMinute),
-            field(ctx, 'itp_6mwt_end', 'End of program', { suffix: 'meters', inputmode: 'numeric' }))),
+            h('div', field(ctx, 'itp_6mwt_end', 'End of program', { suffix: 'meters', inputmode: 'numeric' }), sixMinuteEnd))),
         card(null, field(ctx, 'itp_thr', 'Target heart rate', { suffix: 'bpm' })))),
     h('div.two-col',
       screenCard(ctx, 'General Anxiety Disorder score (GAD-2)', 'gad2', GAD2),
@@ -594,11 +626,35 @@ function sessionForm(ctx, n) {
     h('div.two-col',
       card('Remarks',
         field(ctx, `${k}_borg`, 'Borg scale (6–20)'),
-        h('div.checks', check(ctx, `${k}_sym_chest`, 'Chest heaviness'), check(ctx, `${k}_sym_sob`, 'Shortness of breath'), check(ctx, `${k}_sym_dizzy`, 'Dizziness'), check(ctx, `${k}_sym_palp`, 'Palpitation'))),
+        symptomChecks(ctx, k),
+        field(ctx, `${k}_nurse_note`, "Nurse's Note", { multiline: true, rows: 3 })),
       card('Discharge vitals',
         bp(ctx, `${k}_dc_bp`, 'Blood pressure'),
         grid(2, field(ctx, `${k}_dc_hr`, 'Heart rate', { suffix: 'bpm' }), field(ctx, `${k}_dc_o2`, 'O2 sat')))),
   );
+}
+
+export const SYMPTOMS = [['chest', 'Chest heaviness'], ['sob', 'Shortness of breath'], ['dizzy', 'Dizziness'], ['palp', 'Palpitation']];
+
+// "No signs and symptoms" and the symptoms rule each other out.
+function symptomChecks(ctx, k) {
+  const none = `${k}_sym_none`;
+  const tags = SYMPTOMS.map(([id]) => `${k}_sym_${id}`);
+  const boxes = h('div.checks',
+    check(ctx, none, 'No signs and symptoms'),
+    SYMPTOMS.map(([id, label]) => check(ctx, `${k}_sym_${id}`, label)));
+  const tick = (tag, on) => {
+    const input = boxes.querySelector(`input[data-tag="${tag}"]`);
+    if (input.checked !== on) input.checked = on;
+    if (ctx.fields[tag] === true && !on) ctx.set(tag, false);
+  };
+  boxes.addEventListener('change', (e) => {
+    const tag = e.target.dataset.tag;
+    if (!e.target.checked) return;
+    if (tag === none) tags.forEach((t) => tick(t, false));
+    else tick(none, false);
+  });
+  return boxes;
 }
 
 // ---------- program status (app-only; not part of the Word template) ----------
