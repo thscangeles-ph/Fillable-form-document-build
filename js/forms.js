@@ -494,7 +494,7 @@ function heartShieldTab(ctx) {
     if (saved && !saved.sections) save();
   });
   return h('div.tab',
-    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are saved with this patient and printed as the last page of Download Word.'),
+    intro('HEART-SHIELD', 'Heart failure vaccination eligibility checklist. Answers are saved with this patient and printed after the Exercise Sessions in Download Word and Download PDF.'),
     frame);
 }
 
