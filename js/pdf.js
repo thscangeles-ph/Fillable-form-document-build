@@ -5,7 +5,7 @@
 import { isoToUs, matchOption, loadTemplate } from './template.js';
 import {
   CONSENT, SAFETY_NOTE, DASI_QUESTIONS, DASI_WEIGHTS, INDICATIONS, COMORBIDITIES, GAD2, PHQ2,
-  SESSIONS, sessionKey, lapLength, heartShieldPage,
+  SESSIONS, sessionKey, lapLength, heartShieldPage, SYMPTOMS, WALK_INITIAL, WALK_END,
 } from './forms.js';
 
 const GOLD = '#C9971C';
@@ -128,10 +128,11 @@ export async function buildPdf(patient) {
   const content = [
     ...consentPages(f, sig, v, blank),
     ...dasiPage(f, sig, v),
-    ...walkPage(f, v, bp),
+    ...walkPage(f, v, bp, WALK_INITIAL, '6 Minute Walk Test Results', 'pt_date'),
     ...planPage(f, v, bp),
     ...sessionPages(f, v, bp),
     ...heartShieldPages(f),
+    ...walkPage(f, v, bp, WALK_END, '6 Minute Walk Test Results — End of Program', `${WALK_END}_date`),
   ];
 
   const patientLine = [['Patient', f.pt_name], ['Age', f.pt_age], ['Enrolled', isoToUs(f.pt_date)]].filter(([, x]) => x);
@@ -249,30 +250,31 @@ function dasiPage(f, sig, v) {
   ];
 }
 
-function walkPage(f, v, bp) {
+// p: 'smwt' (at enrollment) or 'smwte' (end of program); dateTag: the date printed beside the name.
+function walkPage(f, v, bp, p, heading, dateTag) {
   const row = (name, base, end) => [name, { text: base, alignment: 'center' }, { text: end, alignment: 'center' }];
   return [
-    title('6 Minute Walk Test Results'),
-    line([['Name', v('pt_name')], ['Date', v('pt_date')]], { boldLabels: false }),
-    { ...line([['Age', v('pt_age')], ['Sex', v('pt_sex')], ['Height', v('smwt_height')], ['Weight', v('smwt_weight')]], { boldLabels: false }), margin: [0, 0, 0, 12] },
+    title(heading),
+    line([['Name', v('pt_name')], ['Date', v(dateTag)]], { boldLabels: false }),
+    { ...line([['Age', v('pt_age')], ['Sex', v('pt_sex')], ['Height', v(`${p}_height`)], ['Weight', v(`${p}_weight`)]], { boldLabels: false }), margin: [0, 0, 0, 12] },
     {
       layout: 'form',
       table: {
         widths: ['*', '*', '*'],
         body: [
           [head(''), { ...head('Baseline'), alignment: 'center' }, { ...head('End of Test'), alignment: 'center' }],
-          row('Blood Pressure', bp('smwt_bp_baseline'), bp('smwt_bp_end')),
-          row('Heart rate', v('smwt_hr_baseline'), v('smwt_hr_end')),
-          row('O2 Saturation', v('smwt_o2_baseline'), v('smwt_o2_end')),
+          row('Blood Pressure', bp(`${p}_bp_baseline`), bp(`${p}_bp_end`)),
+          row('Heart rate', v(`${p}_hr_baseline`), v(`${p}_hr_end`)),
+          row('O2 Saturation', v(`${p}_o2_baseline`), v(`${p}_o2_end`)),
         ].map((r) => r.map((c) => (typeof c === 'string' ? { text: c, margin: [0, 4, 0, 4] } : { ...c, margin: [0, 4, 0, 4] }))),
       },
       margin: [0, 0, 0, 16],
     },
-    line([['Stopped or paused before 6 minutes?', v('smwt_stopped')], ['If yes, reason?', v('smwt_stop_reason')]], { boldLabels: false }),
-    { ...line([['Other symptoms at end of test?', v('smwt_symptoms')]], { boldLabels: false }), margin: [0, 0, 0, 12] },
-    { text: ['Number of laps: ', v('smwt_laps'), `  (x ${lapLength(f)} meters)`], margin: [0, 0, 0, 5] },
-    { text: ['Final partial lap: ', v('smwt_partial'), '  (meters)'], margin: [0, 0, 0, 8] },
-    { text: ['Total distance walked in 6 minutes: ', { text: v('smwt_total'), bold: false }, '  meters'], bold: true },
+    line([['Stopped or paused before 6 minutes?', v(`${p}_stopped`)], ['If yes, reason?', v(`${p}_stop_reason`)]], { boldLabels: false }),
+    { ...line([['Other symptoms at end of test?', v(`${p}_symptoms`)]], { boldLabels: false }), margin: [0, 0, 0, 12] },
+    { text: ['Number of laps: ', v(`${p}_laps`), `  (x ${lapLength(f, p)} meters)`], margin: [0, 0, 0, 5] },
+    { text: ['Final partial lap: ', v(`${p}_partial`), '  (meters)'], margin: [0, 0, 0, 8] },
+    { text: ['Total distance walked in 6 minutes: ', { text: v(`${p}_total`), bold: false }, '  meters'], bold: true },
   ];
 }
 
@@ -336,9 +338,14 @@ function sessionPages(f, v, bp) {
   const cell = (lines) => ({ stack: lines.map((l) => (typeof l === 'string' || Array.isArray(l) ? { text: l || ' ' } : l)), fontSize: 8.3 });
   const rows = Array.from({ length: SESSIONS }, (_, i) => {
     const k = sessionKey(i + 1);
+    const note = {
+      colSpan: 5,
+      text: [{ text: `Nurse's Note (Session # ${i + 1}): `, bold: true }, v(`${k}_nurse_note`)],
+      fontSize: 8.3,
+    };
     const vit = (ex, phase) => [`BP  ${bp(`${k}_${ex}_${phase}_bp`)}`, `HR  ${v(`${k}_${ex}_${phase}_hr`)}`, `O2 sat  ${v(`${k}_${ex}_${phase}_o2`)}`];
     const vitals = (phase) => cell([...vit('cal', phase), '', '', ...vit('tm', phase), ...vit('bike', phase)]);
-    return [
+    return [[
       cell([
         f[`${k}_date`] ? v(`${k}_date`) : { text: 'Date', italics: true, color: '#999999' },
         '',
@@ -356,10 +363,8 @@ function sessionPages(f, v, bp) {
       cell([
         `Borg scale: ${v(`${k}_borg`)}`,
         '',
-        checkRow(f[`${k}_sym_chest`] === true, 'Chest heaviness', 8.3),
-        checkRow(f[`${k}_sym_sob`] === true, 'Shortness of breath', 8.3),
-        checkRow(f[`${k}_sym_dizzy`] === true, 'Dizziness', 8.3),
-        checkRow(f[`${k}_sym_palp`] === true, 'Palpitation', 8.3),
+        checkRow(f[`${k}_sym_none`] === true, 'No signs and symptoms', 8.3),
+        ...SYMPTOMS.map(([id, text]) => checkRow(f[`${k}_sym_${id}`] === true, text, 8.3)),
         '',
         'Discharge Vitals:',
         `BP  ${bp(`${k}_dc_bp`)}`,
@@ -369,8 +374,8 @@ function sessionPages(f, v, bp) {
         'Cardiac Rehab Nurse/',
         `Physical Therapist: ${v(`${k}_therapist`)}`,
       ]),
-    ];
-  });
+    ], [note, {}, {}, {}, {}]];
+  }).flat();
   const th = (t) => ({ ...head(t), alignment: 'center', fontSize: 8.3 });
   return [
     title('Exercise Monitoring Sheet'),

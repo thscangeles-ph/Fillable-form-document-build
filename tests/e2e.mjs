@@ -80,7 +80,7 @@ try {
   await page.screenshot({ path: `${out}/dasi.png`, fullPage: true });
 
   // 6MWT
-  await tab('6 Minute Walk');
+  await tab('6 Minute Walk(?! \\(End)');
   await fill('smwt_height', '1.70 m');
   await fill('smwt_weight', '72 kg');
   await fill('smwt_bp_baseline_sys', '120');
@@ -126,7 +126,7 @@ try {
   await page.dispatchEvent('#f_s01_date', 'change');
   await fill('s01_weight', '72');
   await select('s01_cal_sets', '3');
-  await select('s01_cal_weights', '1.0 kg');
+  await select('s01_cal_weights', '2 lbs');
   await fill('s01_tm_duration', '15');
   await fill('s01_tm_speed', '3.5');
   await fill('s01_tm_pre_bp_sys', '118');
@@ -134,10 +134,32 @@ try {
   await select('s01_tm_pre_o2', '97%');
   await select('s01_borg', '12');
   await page.click('[data-tag="s01_sym_sob"] + .box');
+  // "No signs and symptoms" and the symptoms clear each other.
+  await page.click('[data-tag="s01_sym_none"] + .box');
+  expect(!(await page.isChecked('[data-tag="s01_sym_sob"]')), 'no-symptoms box clears the symptoms');
+  await page.click('[data-tag="s01_sym_sob"] + .box');
+  expect(!(await page.isChecked('[data-tag="s01_sym_none"]')), 'a symptom clears the no-symptoms box');
+  await fill('s01_nurse_note', 'Tolerated well.\nMild SOB on treadmill.');
   await fill('s01_therapist', 'PT Cruz');
   await page.waitForTimeout(700);
   await page.screenshot({ path: `${out}/sessions.png`, fullPage: true });
   expect((await page.textContent('#save-status')).includes('Up to date'), 'saved');
+
+  // 6 Minute Walk at the end of the program: its own tab, lap length and total.
+  await tab('6 Minute Walk \\(End\\)');
+  await page.fill('#f_smwte_date', '2026-11-30');
+  await page.dispatchEvent('#f_smwte_date', 'change');
+  await page.selectOption('#f_smwte_lap_length', '20');
+  await fill('smwte_laps', '40');
+  await select('smwte_partial', '5 m');
+  await fill('smwte_hr_end', '96');
+  expect((await page.textContent('.computed.accent .computed-value')) === '805 m', 'end 6MWT total = 40 x 20 + 5');
+  await page.screenshot({ path: `${out}/walk-end.png`, fullPage: true });
+  await tab('Treatment Plan');
+  await page.getByRole('button', { name: /Use end 6MWT result \(805 m\)/ }).click();
+  expect((await page.inputValue('#f_itp_6mwt_end')) === '805', 'end 6MWT copied to the Treatment Plan');
+  await tab('Exercise Sessions');
+  await page.waitForTimeout(700);
 
   // Reload: data persists
   await page.reload();
@@ -203,7 +225,9 @@ try {
     dasi_total: '23.45', dasi_vo2: '19.68 mL/kg/min', dasi_mets: '5.62', dasi_yes_1: '●', dasi_no_1: '○', dasi_no_12: '●',
     smwt_bp_baseline_sys: '120', smwt_o2_baseline: '98%', smwt_laps: '38', smwt_partial: '7 m', smwt_total: '387',
     itp_bmi: '24.9', itp_ind_2: '☒', itp_ind_1: '☐', gad2_total: '3', phq2_total: '1', itp_6mwt_initial: '387', itp_thr: '120',
-    s01_date: '11/02/2026', s01_tm_duration: '15 min', s01_tm_speed: '3.5', s01_cal_weights: '1.0 kg', s01_tm_pre_o2: '97%', s01_sym_sob: '☒', s01_borg: '12',
+    s01_date: '11/02/2026', s01_tm_duration: '15 min', s01_tm_speed: '3.5', s01_cal_weights: '2 lbs', s01_tm_pre_o2: '97%', s01_sym_sob: '☒', s01_sym_none: '☐', s01_borg: '12',
+    s01_nurse_note: 'Tolerated well.Mild SOB on treadmill.', smwte_date: '11/30/2026', smwte_laps: '40', smwte_partial: '5 m', smwte_total: '805',
+    smwte_hr_end: '96', itp_6mwt_end: '805',
   };
   for (const [tag, want] of Object.entries(checks)) {
     const got = ctl(tag);
@@ -216,7 +240,12 @@ try {
     'Potentially eligible — verify vaccine-specific schedule', 'HFrEF', 'Dr. A. Reyes', 'Answer']) {
     expect(xml.includes(text), `HEART-SHIELD page contains "${text}"`);
   }
-  expect(xml.lastIndexOf('Heart Failure Vaccination Eligibility Checklist') > xml.lastIndexOf('<w:tag w:val="s12_therapist"/>'), 'HEART-SHIELD page comes last');
+  const endWalk = xml.indexOf('6 Minute Walk Test Results — End of Program');
+  expect(xml.lastIndexOf('Heart Failure Vaccination Eligibility Checklist') > xml.lastIndexOf('<w:tag w:val="s12_therapist"/>'), 'HEART-SHIELD page after the sessions');
+  expect(endWalk > xml.lastIndexOf('Heart Failure Vaccination Eligibility Checklist'), 'end-of-program 6MWT is the last page');
+  expect(xml.slice(endWalk).includes('(x 20 meters)') && xml.slice(0, endWalk).includes('(x 10 meters)'), 'each 6MWT page shows its own lap length');
+  expect(xml.slice(xml.indexOf('<w:tag w:val="s01_nurse_note"/>')).includes('<w:br/>'), 'nurse note keeps its line break');
+  expect((xml.match(/<w:listItem w:displayText="10 lbs"/g) || []).length === 12, 'weights listed in lbs for all 12 sessions');
   expect((xml.match(/rIdSig_/g) || []).length === 3, 'three signatures embedded');
   const custom = await zip.file('customXml/item1.xml').async('string');
   expect(custom.includes('<name>JOVEN SAMILLANO</name>') && custom.includes('<birthday>06/03/1981</birthday>'), `bound data: ${custom}`);
@@ -235,7 +264,8 @@ try {
     const { execFileSync } = await import('node:child_process');
     const text = execFileSync('pdftotext', ['-layout', pdfFile, '-'], { encoding: 'utf8' });
     for (const t of ['Informed Consent for Participation', 'Duke Activity Status Index (DASI)', '6 Minute Walk Test Results', 'Individualized Treatment Plan',
-      'Exercise Monitoring Sheet', 'Heart Failure Vaccination Eligibility Checklist', 'Patient: JOVEN SAMILLANO', '23.45', '387', 'Session # 12', 'Page 1 of']) {
+      'Exercise Monitoring Sheet', 'Heart Failure Vaccination Eligibility Checklist', 'Patient: JOVEN SAMILLANO', '23.45', '387', 'Session # 12', 'Page 1 of',
+      'End of Program', '805', '(x 20 meters)', 'No signs and symptoms', "Nurse's Note (Session # 1): Tolerated well.", 'Weights: 2 lbs']) {
       expect(text.includes(t), `PDF contains "${t}"`);
     }
   } catch (err) {
